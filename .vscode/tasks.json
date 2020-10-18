@@ -1,0 +1,46 @@
+{
+    "tasks": [
+        {
+            "type": "shell",
+            "label": "C/C++: gcc build active file",
+            "command": "/usr/bin/gcc",
+            "args": [
+                "-g",
+				"-Wall",
+				"-pedantic",
+				"-lm",
+				"-Werror",
+				//`sdl2-config --cflags --libs`
+				"-I/usr/include/SDL2",
+				"-D_REENTRANT",
+				"-L/usr/lib",
+				"-pthread",
+                "-lSDL2",
+                
+				"-lSDL2_gfx",
+				"-lSDL2_ttf",
+				"-lSDL2_image",
+                "-lSDL2_mixer",
+                
+                "main.c",
+                "SDL.c",
+                "client.c",
+                "world.c",
+                "geometry.c",
+                "-o",
+                "${fileDirname}/${fileBasenameNoExtension}"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        }
+    ],
+    "version": "2.0.0"
+}

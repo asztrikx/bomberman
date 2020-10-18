@@ -1,0 +1,1 @@
+int squaresize = 50;
