@@ -1,15 +1,13 @@
-#include "object.h"
-#include "character.h"
 #include "geometry.h"
 #include "SDL.h"
 #include <stdlib.h>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL2_gfxPrimitives.h>
+#include "state.h"
+#include "network.h"
 
-Object* objectS;
-int objectSLength = 0;
-Character* characterS;
-int characterSLength = 0;
+World* world;
+User user;
 long long tick = 0; //should be fine for years?
 
 //maybe this header signature should be created main for a wrapper for void ClientDraw
@@ -24,16 +22,35 @@ Uint32 ClientDraw(Uint32 interval, void *param){
 		exit(1);
 	}
 
+	//exit
+	if(world->exit != NULL){
+		if (SDL_SetRenderDrawColor(SDLRenderer, 255, 255, 0, 255) < 0) {
+			SDL_Log("SDL_SetRenderDrawColor: %s", SDL_GetError());
+			exit(1);
+		}
+
+		if(SDL_RenderFillRect(SDLRenderer, &(SDL_Rect){
+			.y = world->exit->y,
+			.x = world->exit->x,
+			.w = squaresize,
+			.h = squaresize,
+		}) < 0){
+			SDL_Log("SDL_RenderFillRect: %s", SDL_GetError());
+			exit(1);
+		}
+	}
+
 	//object
-	for(int i=0; i<objectSLength; i++){
+	ObjectItem* objectItemCurrent = world->objectItemS;
+	while(objectItemCurrent != NULL){
 		if (SDL_SetRenderDrawColor(SDLRenderer, 255, 0, 0, 255) < 0) {
 			SDL_Log("SDL_SetRenderDrawColor: %s", SDL_GetError());
 			exit(1);
 		}
 
 		if(SDL_RenderFillRect(SDLRenderer, &(SDL_Rect){
-			.y = objectS[i].position.y,
-			.x = objectS[i].position.x,
+			.y = objectItemCurrent->object->position.y,
+			.x = objectItemCurrent->object->position.x,
 			.w = squaresize,
 			.h = squaresize,
 		}) < 0){
@@ -43,15 +60,16 @@ Uint32 ClientDraw(Uint32 interval, void *param){
 	}
 
 	//character
-	for(int i=0; i<characterSLength; i++){
+	CharacterItem* characterItemCurrent = world->characterItemS;
+	while(characterItemCurrent != NULL){
 		if (SDL_SetRenderDrawColor(SDLRenderer, 0, 0, 255, 255) < 0) {
 			SDL_Log("SDL_SetRenderDrawColor: %s", SDL_GetError());
 			exit(1);
 		}
 
 		if(SDL_RenderFillRect(SDLRenderer, &(SDL_Rect){
-			.y = characterS[i].position.y,
-			.x = characterS[i].position.x,
+			.y = characterItemCurrent->character->position.y,
+			.x = characterItemCurrent->character->position.x,
 			.w = squaresize,
 			.h = squaresize,
 		}) < 0){
@@ -66,54 +84,75 @@ Uint32 ClientDraw(Uint32 interval, void *param){
 }
 
 //timeout tick overflow
-void ClientReceive(void){
-	objectS = (Object*) malloc(10 * sizeof(Object));
-	objectS[0] = (Object){
-		.type = ObjectTypeWall,
-		.position = (Position){
-			.y = 0,
-			.x = 0,
-		},
-	};
-	objectSLength = 1;
+//ClientReceive gets updates from server
+void ClientReceive(World* _world){
+	world = _world;
+}
 
-	characterS = (Character*) malloc(10 * sizeof(Character));
-	characterS[0] = (Character){
-		.position = (Position){
-			.y = 100,
-			.x = 100,
-		},
-		.type = CharacterTypeUser,
-		.ablityS = NULL,
-	};
-	characterSLength = 1;
+//ClientSend sends updates to server
+Uint32 ClientSend(Uint32 interval, void *param){
+	networkSendServer(user);
+
+	return interval;
+}
+
+void ClientEventKey(SDL_Event sdl_event){
+	//key list update
+	KeyItem* current = user.keyItemS;
+	KeyItem* prev = NULL;
+	while(current != NULL){
+		if(current->key == sdl_event.key.keysym.sym){
+			//key already in list
+			if(sdl_event.type == SDL_KEYDOWN){
+				return;
+			}
+
+			//key in list, remove
+			if(sdl_event.type == SDL_KEYUP){
+				if(prev == NULL){
+					//relink
+					user.keyItemS = current->next;
+					current->next->prev = NULL;
+				} else {
+					//relink
+					prev->next = current->next;
+					current->next->prev = prev;
+				}
+
+				//free
+				free(current);
+			}
+		}
+
+		prev = current;
+		current = current->next;
+	}
+
+	//key not in list, add
+	if(sdl_event.type == SDL_KEYDOWN){
+		KeyItem* keyItem = (KeyItem*) malloc(sizeof(KeyItem));
+		keyItem->next = user.keyItemS;
+		keyItem->prev = NULL;
+
+		user.keyItemS->prev = keyItem;
+
+		user.keyItemS = keyItem;
+	}
 }
 
 void ClientStart(void){
-	ClientReceive();
-	SDL_AddTimer(1000u/60u, ClientDraw, SDLWindow);
+	user.name = "teszt";
+	user.keyItemS = NULL;
+
+	ClientReceive(); //combined timer with draw
+	SDL_AddTimer(1000u/60u, ClientDraw, NULL);
+	SDL_AddTimer(1000u/60u, ClientSend, NULL);
 
 	//events
-	SDL_Event event;
-	while (SDL_WaitEvent(&event) && event.type != SDL_QUIT) {
-		int deleteme = 10;
-
-		//key
-		if(event.type == SDL_KEYDOWN){
-			switch(event.key.keysym.sym){
-				case SDLK_w:
-					characterS[0].position.y -= deleteme;
-					break;
-				case SDLK_a:
-					characterS[0].position.x -= deleteme;
-					break;
-				case SDLK_s:
-					characterS[0].position.y += deleteme;
-					break;
-				case SDLK_d:
-					characterS[0].position.x += deleteme;
-					break;
-			}
+	SDL_Event sdl_event;
+	while (SDL_WaitEvent(&sdl_event) && sdl_event.type != SDL_QUIT) {
+		if(sdl_event.type == SDL_KEYDOWN || sdl_event.type == SDL_KEYUP){
+			ClientEventKey(sdl_event);
 		}
 	}
 }

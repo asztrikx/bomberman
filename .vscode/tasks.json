@@ -22,11 +22,7 @@
 				"-lSDL2_image",
                 "-lSDL2_mixer",
                 
-                "main.c",
-                "SDL.c",
-                "client.c",
-                "world.c",
-                "geometry.c",
+                "*.c",
                 "-o",
                 "${fileDirname}/${fileBasenameNoExtension}"
             ],
