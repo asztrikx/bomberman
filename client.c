@@ -14,6 +14,17 @@ long long tick = 0; //should be fine for years?
 
 //maybe this header signature should be created main for a wrapper for void ClientDraw
 Uint32 ClientDraw(Uint32 interval, void *param){
+	//clear & background
+	if(SDL_SetRenderDrawColor(SDLRenderer, 0, 255, 0, 255) < 0){
+		SDL_Log("SDL_SetRenderDrawColor: %s", SDL_GetError());
+		exit(1);
+	}
+	if(SDL_RenderClear(SDLRenderer) < 0){
+		SDL_Log("SDL_RenderClear: %s", SDL_GetError());
+		exit(1);
+	}
+
+	//object
 	for(int i=0; i<objectSLength; i++){
 		if (SDL_SetRenderDrawColor(SDLRenderer, 255, 0, 0, 255) < 0) {
 			SDL_Log("SDL_SetRenderDrawColor: %s", SDL_GetError());
@@ -31,6 +42,7 @@ Uint32 ClientDraw(Uint32 interval, void *param){
 		}
 	}
 
+	//character
 	for(int i=0; i<characterSLength; i++){
 		if (SDL_SetRenderDrawColor(SDLRenderer, 0, 0, 255, 255) < 0) {
 			SDL_Log("SDL_SetRenderDrawColor: %s", SDL_GetError());
@@ -75,4 +87,33 @@ void ClientReceive(void){
 		.ablityS = NULL,
 	};
 	characterSLength = 1;
+}
+
+void ClientStart(void){
+	ClientReceive();
+	SDL_AddTimer(1000u/60u, ClientDraw, SDLWindow);
+
+	//events
+	SDL_Event event;
+	while (SDL_WaitEvent(&event) && event.type != SDL_QUIT) {
+		int deleteme = 10;
+
+		//key
+		if(event.type == SDL_KEYDOWN){
+			switch(event.key.keysym.sym){
+				case SDLK_w:
+					characterS[0].position.y -= deleteme;
+					break;
+				case SDLK_a:
+					characterS[0].position.x -= deleteme;
+					break;
+				case SDLK_s:
+					characterS[0].position.y += deleteme;
+					break;
+				case SDLK_d:
+					characterS[0].position.x += deleteme;
+					break;
+			}
+		}
+	}
 }

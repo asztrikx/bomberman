@@ -2,6 +2,6 @@
 #define CLIENT_H_INCLUDED
 
 void ClientReceive(void);
-Uint32 ClientDraw(Uint32 interval, void *param);
+void ClientStart(void);
 
 #endif
