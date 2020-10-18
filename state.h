@@ -11,9 +11,15 @@ typedef struct ObjectItem{
 	struct ObjectItem* prev;
 } ObjectItem;
 
+typedef struct CharacterItem{
+	Character* character;
+	struct CharacterItem* next;
+	struct CharacterItem* prev;
+} CharacterItem;
+
 typedef struct{
 	ObjectItem* objectItemS; //use 2d array
-	Character* characterS;
+	Character* characterItemS;
 	Position exit;
 } World;
 
