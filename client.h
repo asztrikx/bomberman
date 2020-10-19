@@ -5,5 +5,6 @@
 
 void ClientReceive(World* world);
 void ClientStart(void);
+void ClientConnect(void);
 
 #endif

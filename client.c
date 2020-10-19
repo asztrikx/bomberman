@@ -7,11 +7,30 @@
 #include "network.h"
 
 World* world;
-User user;
+User* user;
 long long tick = 0; //should be fine for years?
 
-//maybe this header signature should be created main for a wrapper for void ClientDraw
-Uint32 ClientDraw(Uint32 interval, void *param){
+//ClientConnect connects to a server
+void ClientConnect(void){
+	user = (User*) malloc(sizeof(User));
+	user->name = "asd";
+	user->nameLength = 3;
+	networkConnectClient(user); //blocking
+
+	//shouldnt be here
+	SDL_AddTimer(1000u/60u, ClientSend, NULL);
+
+	//events
+	SDL_Event sdl_event;
+	while (SDL_WaitEvent(&sdl_event) && sdl_event.type != SDL_QUIT) {
+		if(sdl_event.type == SDL_KEYDOWN || sdl_event.type == SDL_KEYUP){
+			ClientEventKey(sdl_event);
+		}
+		
+	}
+}
+
+void ClientDraw(void){
 	//clear & background
 	if(SDL_SetRenderDrawColor(SDLRenderer, 0, 255, 0, 255) < 0){
 		SDL_Log("SDL_SetRenderDrawColor: %s", SDL_GetError());
@@ -79,14 +98,14 @@ Uint32 ClientDraw(Uint32 interval, void *param){
 	}
 
 	SDL_RenderPresent(SDLRenderer);
-
-	return interval;
 }
 
 //timeout tick overflow
 //ClientReceive gets updates from server
 void ClientReceive(World* _world){
 	world = _world;
+
+	ClientDraw();
 }
 
 //ClientSend sends updates to server
@@ -141,18 +160,5 @@ void ClientEventKey(SDL_Event sdl_event){
 }
 
 void ClientStart(void){
-	user.name = "teszt";
-	user.keyItemS = NULL;
-
-	ClientReceive(); //combined timer with draw
-	SDL_AddTimer(1000u/60u, ClientDraw, NULL);
-	SDL_AddTimer(1000u/60u, ClientSend, NULL);
-
-	//events
-	SDL_Event sdl_event;
-	while (SDL_WaitEvent(&sdl_event) && sdl_event.type != SDL_QUIT) {
-		if(sdl_event.type == SDL_KEYDOWN || sdl_event.type == SDL_KEYUP){
-			ClientEventKey(sdl_event);
-		}
-	}
+	//hello client
 }

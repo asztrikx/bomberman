@@ -5,5 +5,7 @@
 
 void networkSendServer(User* user);
 void networkSendClient(World* world);
+void networkConnectClient(User* user);
+void networkConnectServer(User* user);
 
 #endif

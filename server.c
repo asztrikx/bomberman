@@ -55,34 +55,129 @@ void ServerStart(void){
 
 //ServerReceive gets updates from users
 void ServerReceive(User* user){
+	//auth
+	UserItem* userItem = userItemS;
+	while(userItem != NULL){
+		//not timing attack safe compare
+		if(strcmp(user->name, userItem->user.auth) == 0){
+			break;
+		}
 
+		userItem = userItem->next;
+	}
+
+	if(userItem == NULL){
+		return;
+	}
+
+	//change name
+	if(strcmp(userItem->user.name, user->name) != 0){
+		strcpy(userItem->user.name, user->name); //length check
+		userItem->user.nameLength = user->nameLength; //validate
+	}
+
+	//key apply
+	KeyItem* keyItem = user->keyItemS;
+	while(keyItem != NULL){
+		if(keyItem->key == SDLK_w){
+			userItem->user.character->velocity.y -= 10;
+		} else if(keyItem->key == ...)
+	}
 }
 
 //ClientSend sends updates to server
 Uint32 ServerSend(Uint32 interval, void *param){
-	networkSendClient(world);
+	networkSendClient(world); //send only seeable parts
 
 	return interval;
 }
 
 void ServerStop(void){
-	/*CharacterItem* current = ServerWorld.characterItemS;
-	while(current != NULL){
-		CharacterItem* next = current->next;
-		current = NULL;/** & free
-		ServerWorld.characterItemS = NULL;
-	}*/
-	//free
-	//ServerWorld.objectItemS = NULL;
 }
 
-void ServerJoin(User user){
+User* ServerConnect(User* user){
 	//check if game is running
 
-	//add to userItems
-	//generate id
 	//add character with id
-	//send id
+
+	//malformed struct
+	if(user->auth != NULL){
+		printf("ServerJoin: id not null");
+		return NULL;
+	}
+	
+	if(user->ablityS != NULL){
+		printf("ServerJoin: abilityS not null");
+		return NULL;
+	}
+
+	if(user->keyItemS != NULL){
+		printf("ServerJoin: keyItems not null");
+		return NULL;
+	}
+
+	if(user->name == NULL){
+		printf("ServerJoin: name is null");
+		return NULL;
+	}
+
+	//name length check
+
+	//id generate
+	char* id = (char*) malloc(26 * sizeof(char)); //30years to crack
+	while (true){
+		for(int i=0; i<26; i++){
+			id[i] = rand() % ('Z' - 'A' + 1) + 'A';
+		}
+		
+		UserItem* userItemCurrent = userItemS;
+		while(userItemCurrent != NULL){
+			if(strcmp(userItemCurrent->user.auth, id) == 0){
+				break;
+			}		
+			userItemCurrent = userItemCurrent->next;
+		}
+
+		if(userItemCurrent == NULL){
+			break;
+		}
+	}
+	user->auth = id;
+
+	//insert
+	UserItem* userItem = (UserItem*) malloc(sizeof(UserItem));
+	userItem->user = *user; //copy as it will be freed by caller
+	if(userItemS == NULL){
+		userItemS = userItem;
+		userItemS->next = NULL;
+		userItemS->prev = NULL;
+	} else {
+		userItem->next = userItemS;
+		userItem->prev = NULL;
+		
+		userItemS->prev = userItem;
+		
+		userItemS = userItem;
+	}
+
+	//character insert
+	CharacterItem* characterItem = (CharacterItem*) malloc(sizeof(CharacterItem));
+	characterItem->character->type = CharacterTypeUser;
+	if(world->characterItemS == NULL){
+		characterItem->next = NULL;
+		characterItem->prev = NULL;
+
+		world->characterItemS = characterItem;
+	}else{
+		characterItem->next = world->characterItemS;
+		characterItem->prev = NULL;
+
+		world->characterItemS->prev = characterItem;
+
+		world->characterItemS = characterItem;
+	}
+
+	return user;
 }
 
 	/*int deleteme = 10;

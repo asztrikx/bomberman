@@ -34,7 +34,7 @@ typedef struct{
 
 //Key list
 typedef struct KeyItem{
-	SDL_Keysym* key;
+	SDL_Keycode key;
 	struct KeyItem* next;
 	struct KeyItem* prev;
 } KeyItem;
@@ -43,9 +43,11 @@ typedef struct KeyItem{
 typedef struct{
 	KeyItem* keyItemS; //if NULL then no key was pressed
 	char* name; //if NULL?, then no update
+	int nameLength;
 	Ability* ablityS;
-	char* id;
-	//?
+	char* auth;
+	Character* character;
+	//??
 } User; //not seeable by others
 
 typedef struct UserItem{
@@ -63,7 +65,8 @@ typedef enum{
 typedef struct{
 	Position position;
 	CharacterType type;
-	char* id;
+	Position velocity;
+	int bomb;
 	//Object* bombS; //why?
 } Character; //seeable by others
 
