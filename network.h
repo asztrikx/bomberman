@@ -3,8 +3,8 @@
 
 #include "state.h"
 
-void networkSendClient(World* world);
-void networkSendServer(User* user);
-User* networkConnectServer(User* user);
+void networkSendClient(WorldServer* worldServer);
+void networkSendServer(UserClient* userClient);
+void networkConnectServer(UserClient* userClient);
 
 #endif
