@@ -3,8 +3,9 @@
 
 #include "state.h"
 
-void ServerReceive(User* user);
-User* ServerConnect(User* user);
+void ServerReceive(UserServer* userServerUnsafe);
+void ServerConnect(UserServer* userServerUnsafe);
 void ServerStart(void);
+void ServerStop(void);
 
 #endif

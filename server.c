@@ -1,25 +1,28 @@
+#include "debugmalloc.h"
 #include "server.h"
 #include <stdbool.h>
 #include "state.h"
 #include "network.h"
 
-static UserItem* userItemS;
-static World* world;
+static UserServerItem* userServerItemS;
+static WorldServer* worldServer;
 static long long tickCount = 0;
 static unsigned int tickRate = 60u;
 
+//[R] move to geom
 void ServerWorldGenerate(int height, int width){
-	world = (World*) malloc(sizeof(World));
-	world->objectItemS = NULL;
-	world->characterItemS = NULL;
-	world->exit = NULL;
+	worldServer = (WorldServer*) malloc(sizeof(WorldServer));
+	worldServer->objectItemS = NULL;
+	worldServer->characterItemS = NULL;
+	worldServer->exit = NULL;
 	
 	for(int i=0; i<height; i++){
 		int y = i * squaresize;
 		int x = 0;
 
-		//object
-		Object object = (Object){
+		//objectItem
+		ObjectItem* objectItem = (ObjectItem*) malloc(sizeof(ObjectItem));
+		objectItem->object = (Object){
 			.created = tickCount,
 			.position = (Position){
 				.y = y,
@@ -28,49 +31,51 @@ void ServerWorldGenerate(int height, int width){
 			.type = ObjectTypeWall,
 			.velocity = (Position){0,0},
 		};
-
-		//objectItem
-		ObjectItem* objectItem = (ObjectItem*) malloc(sizeof(ObjectItem));
-		objectItem->object = object;
 		
 		//objectItemS first element
-		if(world->objectItemS == NULL){
+		if(worldServer->objectItemS == NULL){
 			objectItem->next = NULL;
 			objectItem->prev = NULL;
 
-			world->objectItemS = objectItem;
+			worldServer->objectItemS = objectItem;
 
 			continue;
 		}
 
 		//objectItemS insert front
-		objectItem->next = world->objectItemS;
+		objectItem->next = worldServer->objectItemS;
 		objectItem->prev = NULL;
 
-		world->objectItemS->prev = objectItem;
+		worldServer->objectItemS->prev = objectItem;
 
-		world->objectItemS = objectItem;
+		worldServer->objectItemS = objectItem;
 	}
 }
 
+//ServerTick calculates new frame, notifies users
 Uint32 ServerTick(Uint32 interval, void *param){
 	//[R]bomb explosion
 	//[R]player death
 	//[R]crate delete
 
-	//[R] send to clients
-	networkSendClient(world);
+	//user notify
+	UserServerItem* userServerItemCurrent = userServerItemS;
+	while(userServerItemCurrent != NULL){
+		networkSendClient(worldServer);
+
+		userServerItemCurrent = userServerItemCurrent->next;
+	}
 
 	return interval;
 }
 
+//ServerStart generates world, start ticking
 void ServerStart(void){
 	ServerWorldGenerate(10, 10);
 
 	SDL_AddTimer(1000u/tickRate, ServerTick, NULL);
-	//start tick
 }
-
+//[R] move to geom
 bool collisionPositionS(Position position1, Position position2){
 	if(abs(position1.x - position2.x) >= squaresize){
 		return false;
@@ -80,9 +85,9 @@ bool collisionPositionS(Position position1, Position position2){
 	}
 	return true;
 }
-
+//[R] move to geom
 bool collisionObjectS(Position position){
-	ObjectItem* objectItem = world->objectItemS;
+	ObjectItem* objectItem = worldServer->objectItemS;
 	while(objectItem != NULL){
 		if(collisionPositionS(objectItem->object.position, position)){
 			return true;
@@ -93,9 +98,9 @@ bool collisionObjectS(Position position){
 	
 	return false;
 }
-
+//[R] move to geom
 bool collisionCharacterS(Position position, Character* characterException){
-	CharacterItem* characterItem = world->characterItemS;
+	CharacterItem* characterItem = worldServer->characterItemS;
 	while(characterItem != NULL){
 		if(
 			collisionPositionS(characterItem->character.position, position) &&
@@ -110,46 +115,46 @@ bool collisionCharacterS(Position position, Character* characterException){
 	return false;
 }
 
-//keyMovement calculates new position based on keyItem.key
-void keyMovement(KeyItem* keyItem, User* user){
+//keyMovement calculates user position based on keyItem.key
+void keyMovement(SDL_Keycode key, UserServer* userServer){
 	if(
-		keyItem->key != SDLK_w &&
-		keyItem->key != SDLK_a &&
-		keyItem->key != SDLK_s &&
-		keyItem->key != SDLK_d
+		key != SDLK_w &&
+		key != SDLK_a &&
+		key != SDLK_s &&
+		key != SDLK_d
 	){
 		return;
 	}
 
-	Position positionNew = user->character->position;
-	if(keyItem->key == SDLK_w){
-		positionNew.y -= user->character->velocity.y;
-	} else if(keyItem->key == SDLK_a){
-		positionNew.x -= user->character->velocity.x;
-	} else if(keyItem->key == SDLK_s){
-		positionNew.y += user->character->velocity.y;
-	} else if(keyItem->key == SDLK_d){
-		positionNew.x += user->character->velocity.x;
+	Position positionNew = userServer->character->position;
+	if(key == SDLK_w){
+		positionNew.y -= userServer->character->velocity.y;
+	} else if(key == SDLK_a){
+		positionNew.x -= userServer->character->velocity.x;
+	} else if(key == SDLK_s){
+		positionNew.y += userServer->character->velocity.y;
+	} else if(key == SDLK_d){
+		positionNew.x += userServer->character->velocity.x;
 	}
 
 	if(
 		collisionObjectS(positionNew) ||
-		collisionCharacterS(positionNew, user->character)
+		collisionCharacterS(positionNew, userServer->character)
 	){
 		return;
 	}
 	
-	user->character->position = positionNew;
+	userServer->character->position = positionNew;
 }
 
 //keyBomb calculates bomb position based on keyItem.key
-void keyBomb(KeyItem* keyItem, User* user){
-	if(keyItem->key != SDLK_SPACE){
+void keyBomb(SDL_Keycode key, UserServer* userServer){
+	if(key != SDLK_SPACE){
 		return;
 	}
 	return;
 
-	Position positionNew = user->character->position;
+	Position positionNew = userServer->character->position;
 
 	//position
 	if (positionNew.y % squaresize > squaresize / 2){
@@ -164,7 +169,7 @@ void keyBomb(KeyItem* keyItem, User* user){
 	//collision
 	if (
 		collisionObjectS(positionNew) ||
-		collisionCharacterS(positionNew, user->character)
+		collisionCharacterS(positionNew, userServer->character)
 	){
 		return;
 	}
@@ -181,118 +186,146 @@ void keyBomb(KeyItem* keyItem, User* user){
 	ObjectItem* objectItem = (ObjectItem*) malloc(sizeof(Object));
 	objectItem->object = object;
 
-	if(world->objectItemS == NULL){ //first in list
+	if(worldServer->objectItemS == NULL){ //first in list
 		objectItem->prev = NULL;
 		objectItem->next = NULL;
-		world->objectItemS = objectItem;
+		worldServer->objectItemS = objectItem;
 	} else {
 		objectItem->prev = NULL;
-		objectItem->next = world->objectItemS;
+		objectItem->next = worldServer->objectItemS;
 		
-		world->objectItemS->prev = objectItem;
+		worldServer->objectItemS->prev = objectItem;
 
-		world->objectItemS = objectItem;
+		worldServer->objectItemS = objectItem;
 	}
 }
 
 //ServerReceive gets updates from users
-void ServerReceive(User* user){
-	//auth
-	UserItem* userItem = userItemS;
-	while(userItem != NULL){
-		//[R] not timing attack safe compare
-		if(strcmp(user->auth, userItem->user.auth) == 0){
+void ServerReceive(UserServer* userServerUnsafe){
+	//auth validate
+	UserServerItem* userServerItemCurrent = userServerItemS;
+	while(userServerItemCurrent != NULL){
+		//timing attack safe compare
+		bool diff = false;
+		for(int i=0; i<26; i++){
+			if(userServerUnsafe->auth[i] != userServerItemCurrent->userServer.auth[i]){
+				diff = true;
+			}
+		}
+		if(!diff){
 			break;
 		}
 
-		userItem = userItem->next;
+		userServerItemCurrent = userServerItemCurrent->next;
 	}
 
-	if(userItem == NULL){
+	if(userServerItemCurrent == NULL){
 		return;
 	}
-	User* userAuth = &(userItem->user);
+	UserServer* userServer = &(userServerItemCurrent->userServer);
 
-	//change name
-	if(strcmp(userAuth->name, user->name) != 0){
-		strcpy(userAuth->name, user->name); //[R] length check
+	//name change
+	if(
+		userServerUnsafe != NULL &&
+		strncmp(userServer->name, userServerUnsafe->name, 15) != 0
+	){
+		strncpy(userServer->name, userServerUnsafe->name, 15);
 	}
 
-	//key apply
-	KeyItem* keyItem = user->keyItemS;
-	while(keyItem != NULL){
-		keyBomb(keyItem, userAuth);
-		keyMovement(keyItem, userAuth);
-
-		keyItem = keyItem->next;
+	//keyS apply
+	for(int i=0; i<userServerUnsafe->keySLength; i++){
+		keyBomb(userServerUnsafe->keyS[i], userServer);
+		keyMovement(userServerUnsafe->keyS[i], userServer);
 	}
 }
 
+//ServerStop clears server module
 void ServerStop(void){
+	//exit
+	free(worldServer->exit);
+	
+	//characterItems
+	CharacterItem* characterItemCurrent = worldServer->characterItemS;
+	CharacterItem* characterItemPrev;
+	while(characterItemCurrent != NULL){
+		characterItemPrev = characterItemCurrent;
+		characterItemCurrent = characterItemCurrent->next;
+
+		free(characterItemPrev);
+	}
+
+	//objectItems
+	ObjectItem* objectItemCurrent = worldServer->objectItemS;
+	ObjectItem* objectItemPrev;
+	while(objectItemCurrent != NULL){
+		objectItemPrev = objectItemCurrent;
+		objectItemCurrent = objectItemCurrent->next;
+
+		free(objectItemPrev);
+	}
+
+	//worldServer
+	free(worldServer);
+
+	//userItemS
+	UserServerItem* userServerItemCurrent = userServerItemS;
+	UserServerItem* userServerItemPrev;
+	while(userServerItemCurrent != NULL){
+		userServerItemPrev = userServerItemCurrent;
+		userServerItemCurrent = userServerItemCurrent->next;
+
+		free(userServerItemPrev);
+	}
 }
 
-User* ServerConnect(User* user){
+//ServerConnect register new connection user, returns it with auth
+void ServerConnect(UserServer* userServerUnsafe){
 	//[R]check if game is running
 
-	//malformed struct
-	if(user->auth != NULL){
-		printf("ServerJoin: id not null");
-		return NULL;
-	}
-	
-	if(user->ablityS != NULL){
-		printf("ServerJoin: abilityS not null");
-		return NULL;
-	}
-
-	if(user->keyItemS != NULL){
-		printf("ServerJoin: keyItems not null");
-		return NULL;
-	}
-
-	if(user->name == NULL){
-		printf("ServerJoin: name is null");
-		return NULL;
-	}
-
-	//[R]name length check
+	//copy
+	UserServerItem* userServerItem = (UserServerItem*) malloc(sizeof(UserServerItem));
+	UserServer* userServer = &(userServerItem->userServer);
+	userServer->auth = (char*) malloc((26 + 1) * sizeof(char)); //30years to crack
+	userServer->character = NULL;
+	userServer->keyS = NULL;
+	userServer->keySLength = 0;
+	userServer->name = (char*) malloc((15 + 1) * sizeof(char));
+	strncpy(userServer->name, userServerUnsafe->name, 15);
+	userServer->name[16] = '\0';
 
 	//id generate
-	char* id = (char*) malloc((26 + 1) * sizeof(char)); //30years to crack
 	while (true){
 		for(int i=0; i<26; i++){
-			id[i] = rand() % ('Z' - 'A' + 1) + 'A';
+			userServer->auth[i] = rand() % ('Z' - 'A' + 1) + 'A';
 		}
-		id[26] = '\0';
+		userServer->auth[26] = '\0';
 		
-		UserItem* userItemCurrent = userItemS;
-		while(userItemCurrent != NULL){
-			if(strcmp(userItemCurrent->user.auth, id) == 0){
+		UserServerItem* userServerItemCurrent = userServerItemS;
+		while(userServerItemCurrent != NULL){
+			if(strcmp(userServerItemCurrent->userServer.auth, userServer->auth) == 0){
 				break;
 			}		
-			userItemCurrent = userItemCurrent->next;
+			userServerItemCurrent = userServerItemCurrent->next;
 		}
 
-		if(userItemCurrent == NULL){
+		if(userServerItemCurrent == NULL){
 			break;
 		}
 	}
-	user->auth = id;
 
 	//insert
-	UserItem* userItem = (UserItem*) malloc(sizeof(UserItem));
-	userItem->user = *user; //copy as it will be freed by caller
-	if(userItemS == NULL){
-		userItemS = userItem;
-		userItemS->next = NULL;
-		userItemS->prev = NULL;
+	if(userServerItemS == NULL){
+		userServerItem->next = NULL;
+		userServerItem->prev = NULL;
+
+		userServerItemS = userServerItem;
 	} else {
-		userItem->next = userItemS;
-		userItem->prev = NULL;
+		userServerItem->next = userServerItemS;
+		userServerItem->prev = NULL;
 		
-		userItemS->prev = userItem;
+		userServerItemS->prev = userServerItem;
 		
-		userItemS = userItem;
+		userServerItemS = userServerItem;
 	}
 
 	//character creater
@@ -305,22 +338,23 @@ User* ServerConnect(User* user){
 	//character insert
 	CharacterItem* characterItem = (CharacterItem*) malloc(sizeof(CharacterItem));
 	characterItem->character = character;
-	if(world->characterItemS == NULL){
+	if(worldServer->characterItemS == NULL){
 		characterItem->next = NULL;
 		characterItem->prev = NULL;
 
-		world->characterItemS = characterItem;
+		worldServer->characterItemS = characterItem;
 	}else{
-		characterItem->next = world->characterItemS;
+		characterItem->next = worldServer->characterItemS;
 		characterItem->prev = NULL;
 
-		world->characterItemS->prev = characterItem;
+		worldServer->characterItemS->prev = characterItem;
 
-		world->characterItemS = characterItem;
+		worldServer->characterItemS = characterItem;
 	}
 
 	//character associate
-	userItem->user.character = &(characterItem->character);
+	userServer->character = &(characterItem->character);
 
-	return user;
+	//reply
+	strcpy(userServerUnsafe->auth, userServer->auth);
 }
