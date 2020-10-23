@@ -6,5 +6,6 @@ typedef struct{
 } Position;
 
 extern int squaresize;
+extern Position velocity;
 
 #endif
