@@ -2,8 +2,10 @@
 #include "state.h"
 #include "network.h"
 
-UserItem* userItemS;
-World* world;
+static UserItem* userItemS;
+static World* world;
+static long long tickCount = 0;
+static unsigned int tickRate = 60u;
 
 void ServerWorldGenerate(int height, int width){
 	world = (World*) malloc(sizeof(World));
@@ -45,12 +47,24 @@ void ServerWorldGenerate(int height, int width){
 
 		world->objectItemS = objectItem;
 	}
+}
 
-	return world;
+Uint32 ServerTick(Uint32 interval, void *param){
+	//[R]bomb explosion
+	//[R]player death
+	//[R]crate delete
+
+	//[R] send to clients
+	networkSendClient(world);
+
+	return interval;
 }
 
 void ServerStart(void){
 	ServerWorldGenerate(10, 10);
+
+	SDL_AddTimer(1000u/tickRate, ServerTick, NULL);
+	//start tick
 }
 
 //ServerReceive gets updates from users
@@ -58,8 +72,8 @@ void ServerReceive(User* user){
 	//auth
 	UserItem* userItem = userItemS;
 	while(userItem != NULL){
-		//not timing attack safe compare
-		if(strcmp(user->name, userItem->user.auth) == 0){
+		//[R] not timing attack safe compare
+		if(strcmp(user->auth, userItem->user.auth) == 0){
 			break;
 		}
 
@@ -69,36 +83,75 @@ void ServerReceive(User* user){
 	if(userItem == NULL){
 		return;
 	}
+	User* userAuth = &(userItem->user);
 
 	//change name
-	if(strcmp(userItem->user.name, user->name) != 0){
-		strcpy(userItem->user.name, user->name); //length check
-		userItem->user.nameLength = user->nameLength; //validate
+	if(strcmp(userAuth->name, user->name) != 0){
+		strcpy(userAuth->name, user->name); //[R] length check
 	}
 
 	//key apply
 	KeyItem* keyItem = user->keyItemS;
 	while(keyItem != NULL){
-		if(keyItem->key == SDLK_w){
-			userItem->user.character->velocity.y -= 10;
-		} else if(keyItem->key == ...)
+		printf("Received: %c\n", keyItem->key);
+		if(keyItem->key == SDLK_SPACE){
+			//position
+			Position position = userAuth->character->position;
+			if (userAuth->character->position.y % squaresize > squaresize / 2){
+				position.y += 1;
+			}
+			if (userAuth->character->position.x % squaresize > squaresize / 2){
+				position.x += 1;
+			}
+
+			//bomb create
+			Object* object = (Object*) malloc(sizeof(Object));
+			object->type = ObjectTypeBomb;
+			object->created = tickCount;
+			object->position = position;
+			object->velocity = (Position){0, 0};
+
+			//bomb insert
+			//position is empty
+			ObjectItem* objectItem = (ObjectItem*) malloc(sizeof(Object));
+			if(world->objectItemS == NULL){
+				objectItem->prev = NULL;
+				objectItem->next = NULL;
+				world->objectItemS = objectItem;
+			} else {
+				objectItem->prev = NULL;
+				objectItem->next = world->objectItemS;
+				
+				world->objectItemS->prev = objectItem;
+
+				world->objectItemS = objectItem;
+			}
+		} else if(keyItem->key == SDLK_w){
+			//[R]collision
+
+			userAuth->character->position.y -= userAuth->character->velocity.y;
+		} else if(keyItem->key == SDLK_a){
+			//[R]collision
+
+			userAuth->character->position.x -= userAuth->character->velocity.x;
+		} else if(keyItem->key == SDLK_s){
+			//[R]collision
+
+			userAuth->character->position.y += userAuth->character->velocity.y;
+		} else if(keyItem->key == SDLK_d){
+			//[R]collision
+
+			userAuth->character->position.x += userAuth->character->velocity.x;
+		}
+		keyItem = keyItem->next;
 	}
-}
-
-//ClientSend sends updates to server
-Uint32 ServerSend(Uint32 interval, void *param){
-	networkSendClient(world); //send only seeable parts
-
-	return interval;
 }
 
 void ServerStop(void){
 }
 
 User* ServerConnect(User* user){
-	//check if game is running
-
-	//add character with id
+	//[R]check if game is running
 
 	//malformed struct
 	if(user->auth != NULL){
@@ -121,14 +174,15 @@ User* ServerConnect(User* user){
 		return NULL;
 	}
 
-	//name length check
+	//[R]name length check
 
 	//id generate
-	char* id = (char*) malloc(26 * sizeof(char)); //30years to crack
+	char* id = (char*) malloc((26 + 1) * sizeof(char)); //30years to crack
 	while (true){
 		for(int i=0; i<26; i++){
 			id[i] = rand() % ('Z' - 'A' + 1) + 'A';
 		}
+		id[26] = '\0';
 		
 		UserItem* userItemCurrent = userItemS;
 		while(userItemCurrent != NULL){
@@ -160,9 +214,16 @@ User* ServerConnect(User* user){
 		userItemS = userItem;
 	}
 
+	//character creater
+	Character character;
+	character.bomb = 1;
+	character.position = (Position) {100,100};
+	character.type = CharacterTypeUser;
+	character.velocity = velocity;
+
 	//character insert
 	CharacterItem* characterItem = (CharacterItem*) malloc(sizeof(CharacterItem));
-	characterItem->character->type = CharacterTypeUser;
+	characterItem->character = character;
 	if(world->characterItemS == NULL){
 		characterItem->next = NULL;
 		characterItem->prev = NULL;
@@ -177,46 +238,8 @@ User* ServerConnect(User* user){
 		world->characterItemS = characterItem;
 	}
 
+	//character associate
+	userItem->user.character = &(characterItem->character);
+
 	return user;
 }
-
-	/*int deleteme = 10;
-	//key
-	switch(sdl_event.key.keysym.sym){
-		case SDLK_w:
-			characterS[0].position.y -= deleteme;
-			break;
-		case SDLK_a:
-			characterS[0].position.x -= deleteme;
-			break;
-		case SDLK_s:
-			characterS[0].position.y += deleteme;
-			break;
-		case SDLK_d:
-			characterS[0].position.x += deleteme;
-			break;
-	}*/
-
-	/*
-
-	objectS = (Object*) malloc(10 * sizeof(Object));
-	objectS[0] = (Object){
-		.type = ObjectTypeWall,
-		.position = (Position){
-			.y = 0,
-			.x = 0,
-		},
-	};
-	objectSLength = 1;
-
-	characterS = (Character*) malloc(10 * sizeof(Character));
-	characterS[0] = (Character){
-		.position = (Position){
-			.y = 100,
-			.x = 100,
-		},
-		.type = CharacterTypeUser,
-		.ablityS = NULL,
-	};
-	characterSLength = 1;
-	*/

@@ -3,8 +3,8 @@
 
 #include "state.h"
 
-void ClientReceive(World* world);
+void ClientReceive(World* _world);
 void ClientStart(void);
-void ClientConnect(void);
+void ClientEventKey(SDL_Event sdl_event);
 
 #endif
