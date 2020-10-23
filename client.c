@@ -1,4 +1,4 @@
-
+#include "debugmalloc.h"
 #include "client.h"
 #include <SDL2/SDL.h>
 #include <SDL2/SDL2_gfxPrimitives.h>
@@ -8,23 +8,26 @@
 #include "geometry.h"
 #include "network.h"
 
-static World* world;
-static User* user;
+static UserClient* userClient;
 //static long long tickCount = 0; //should be fine for years?
 static unsigned int tickRate = 60u;
 
 //ClientSend sends updates to server
 Uint32 ClientSend(Uint32 interval, void *param){
-	networkSendServer(user);
+	if(userClient->keyItemS == NULL){
+		return interval;
+	}
+	
+	networkSendServer(userClient);
 
 	return interval;
 }
 
 void ClientEventKey(SDL_Event sdl_event){
 	//key list update
-	KeyItem* current = user->keyItemS;
-	while(current != NULL){
-		if(current->key == sdl_event.key.keysym.sym){
+	KeyItem* keyItemCurrent = userClient->keyItemS;
+	while(keyItemCurrent != NULL){
+		if(keyItemCurrent->key == sdl_event.key.keysym.sym){
 			//key already in list
 			if(sdl_event.type == SDL_KEYDOWN){
 				return;
@@ -32,28 +35,28 @@ void ClientEventKey(SDL_Event sdl_event){
 
 			//key in list, remove
 			if(sdl_event.type == SDL_KEYUP){
-				if(current->prev == NULL){ //first in list
-					user->keyItemS = current->next;
+				if(keyItemCurrent->prev == NULL){ //first in list
+					userClient->keyItemS = keyItemCurrent->next;
 
 					//last in list also
-					if(current->next != NULL){
-						current->next->prev = NULL;
+					if(keyItemCurrent->next != NULL){
+						keyItemCurrent->next->prev = NULL;
 					}
-				} else if (current->next == NULL) { //last in list, but not first
-					current->prev->next = NULL;
+				} else if (keyItemCurrent->next == NULL) { //last in list, but not first
+					keyItemCurrent->prev->next = NULL;
 				} else {
-					current->prev->next = current->next;
-					current->next->prev = current->prev;
+					keyItemCurrent->prev->next = keyItemCurrent->next;
+					keyItemCurrent->next->prev = keyItemCurrent->prev;
 				}
 
 				//free
-				free(current);
+				free(keyItemCurrent);
 
 				return;
 			}
 		}
 
-		current = current->next;
+		keyItemCurrent = keyItemCurrent->next;
 	}
 
 	//key not in list, add
@@ -61,32 +64,26 @@ void ClientEventKey(SDL_Event sdl_event){
 		KeyItem* keyItem = (KeyItem*) malloc(sizeof(KeyItem));
 		keyItem->key = sdl_event.key.keysym.sym;
 
-		keyItem->next = user->keyItemS;
+		keyItem->next = userClient->keyItemS;
 		keyItem->prev = NULL;
 
-		if(user->keyItemS != NULL){
-			user->keyItemS->prev = keyItem;
+		if(userClient->keyItemS != NULL){
+			userClient->keyItemS->prev = keyItem;
 		}
 		
-		user->keyItemS = keyItem;
+		userClient->keyItemS = keyItem;
 	}
 }
 
 //ClientConnect connects to a server
 void ClientConnect(void){
-	user = (User*) malloc(sizeof(User));
-	user->ablityS = NULL;
-	user->auth = NULL;
-	user->character = NULL;
-	user->keyItemS = NULL;
-	user->name = "asd";
-	user = networkConnectServer(user);
+	networkConnectServer(userClient);
 
 	//server updater
 	SDL_AddTimer(1000u/tickRate, ClientSend, NULL);
 }
 
-void ClientDraw(void){
+void ClientDraw(WorldClient* worldClient){
 	//clear & background
 	if(SDL_SetRenderDrawColor(SDLRenderer, 0, 255, 0, 255) < 0){
 		SDL_Log("SDL_SetRenderDrawColor: %s", SDL_GetError());
@@ -98,15 +95,15 @@ void ClientDraw(void){
 	}
 
 	//exit
-	if(world->exit != NULL){
+	if(worldClient->exit != NULL){
 		if (SDL_SetRenderDrawColor(SDLRenderer, 255, 255, 0, 255) < 0) {
 			SDL_Log("SDL_SetRenderDrawColor: %s", SDL_GetError());
 			exit(1);
 		}
 
 		if(SDL_RenderFillRect(SDLRenderer, &(SDL_Rect){
-			.y = world->exit->y,
-			.x = world->exit->x,
+			.y = worldClient->exit->y,
+			.x = worldClient->exit->x,
 			.w = squaresize,
 			.h = squaresize,
 		}) < 0){
@@ -116,58 +113,57 @@ void ClientDraw(void){
 	}
 
 	//object
-	ObjectItem* objectItemCurrent = world->objectItemS;
-	while(objectItemCurrent != NULL){
+	for(int i=0; i<worldClient->objectSLength; i++){
 		if (SDL_SetRenderDrawColor(SDLRenderer, 255, 0, 0, 255) < 0) {
 			SDL_Log("SDL_SetRenderDrawColor: %s", SDL_GetError());
 			exit(1);
 		}
 
 		if(SDL_RenderFillRect(SDLRenderer, &(SDL_Rect){
-			.y = objectItemCurrent->object->position.y,
-			.x = objectItemCurrent->object->position.x,
+			.y = worldClient->objectS[i].position.y,
+			.x = worldClient->objectS[i].position.x,
 			.w = squaresize,
 			.h = squaresize,
 		}) < 0){
 			SDL_Log("SDL_RenderFillRect: %s", SDL_GetError());
 			exit(1);
 		}
-
-		objectItemCurrent = objectItemCurrent->next;
 	}
 
 	//character
-	CharacterItem* characterItemCurrent = world->characterItemS;
-	while(characterItemCurrent != NULL){
+	for(int i=0; i<worldClient->characterSLength; i++){
 		if (SDL_SetRenderDrawColor(SDLRenderer, 0, 0, 255, 255) < 0) {
 			SDL_Log("SDL_SetRenderDrawColor: %s", SDL_GetError());
 			exit(1);
 		}
 
 		if(SDL_RenderFillRect(SDLRenderer, &(SDL_Rect){
-			.y = characterItemCurrent->character.position.y,
-			.x = characterItemCurrent->character.position.x,
+			.y = worldClient->characterS[i].position.y,
+			.x = worldClient->characterS[i].position.x,
 			.w = squaresize,
 			.h = squaresize,
 		}) < 0){
 			SDL_Log("SDL_RenderFillRect: %s", SDL_GetError());
 			exit(1);
 		}
-
-		characterItemCurrent = characterItemCurrent->next;
 	}
 
 	SDL_RenderPresent(SDLRenderer);
 }
 
-//timeout tick overflow
 //ClientReceive gets updates from server
-void ClientReceive(World* _world){
-	world = _world;
-
-	ClientDraw();
+void ClientReceive(WorldClient* worldCopy){
+	ClientDraw(worldCopy);
 }
 
 void ClientStart(void){
-	ClientConnect();
+	//userClient create
+	userClient = (UserClient*) malloc(sizeof(UserClient));
+	userClient->ablityS = NULL;
+	userClient->auth = NULL;
+	userClient->keyItemS = NULL;
+	userClient->name = (char*) malloc((15 + 1) * sizeof(char));
+
+	//userClient load
+	strcpy(userClient->name, "asd");
 }
