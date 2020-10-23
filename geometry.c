@@ -1,3 +1,4 @@
+#include "debugmalloc.h"
 #include "geometry.h"
 
 int squaresize = 50;
