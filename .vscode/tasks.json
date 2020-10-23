@@ -1,11 +1,11 @@
 {
-    "tasks": [
-        {
-            "type": "shell",
-            "label": "C/C++: gcc build active file",
-            "command": "/usr/bin/gcc",
-            "args": [
-                "-g",
+	"tasks": [
+		{
+			"type": "shell",
+			"label": "C/C++: gcc build active file",
+			"command": "/usr/bin/gcc",
+			"args": [
+				"-g",
 				"-Wall",
 				"-pedantic",
 				"-lm",
@@ -15,28 +15,36 @@
 				"-D_REENTRANT",
 				"-L/usr/lib",
 				"-pthread",
-                "-lSDL2",
-                
+				"-lSDL2",
+				
 				"-lSDL2_gfx",
 				"-lSDL2_ttf",
 				"-lSDL2_image",
-                "-lSDL2_mixer",
-                
-                "*.c",
-                "-o",
-                "${fileDirname}/${fileBasenameNoExtension}"
-            ],
-            "options": {
-                "cwd": "${workspaceFolder}"
-            },
-            "problemMatcher": [
-                "$gcc"
-            ],
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            }
-        }
-    ],
-    "version": "2.0.0"
+				"-lSDL2_mixer",
+				
+				//"*.c",
+				"main.c",
+				"client.c",
+				"geometry.c",
+				"network.c",
+				"SDL.c",
+				"server.c",
+				"state.c",
+
+				"-o",
+				"${fileDirname}/main"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}"
+			},
+			"problemMatcher": [
+				"$gcc"
+			],
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			}
+		}
+	],
+	"version": "2.0.0"
 }
