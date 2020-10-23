@@ -19,7 +19,9 @@ Uint32 ServerTick(Uint32 interval, void *param){
 	//user notify
 	UserServerItem* userServerItemCurrent = userServerItemS;
 	while(userServerItemCurrent != NULL){
+		userServerItemCurrent->userServer.character->type = CharacterTypeYou;		
 		networkSendClient(worldServer);
+		userServerItemCurrent->userServer.character->type = CharacterTypeUser;
 
 		userServerItemCurrent = userServerItemCurrent->next;
 	}
@@ -29,7 +31,7 @@ Uint32 ServerTick(Uint32 interval, void *param){
 
 //ServerStart generates world, start ticking
 void ServerStart(void){
-	/*worldServer =*/ worldGenerate(10, 10);
+	worldServer = worldGenerate(11, 11);
 
 	SDL_AddTimer(1000u/tickRate, ServerTick, NULL);
 }
@@ -71,7 +73,6 @@ void keyBomb(SDL_Keycode key, UserServer* userServer){
 	if(key != SDLK_SPACE){
 		return;
 	}
-	return;
 
 	Position positionNew = userServer->character->position;
 
@@ -108,6 +109,7 @@ void keyBomb(SDL_Keycode key, UserServer* userServer){
 	if(worldServer->objectItemS == NULL){ //first in list
 		objectItem->prev = NULL;
 		objectItem->next = NULL;
+		
 		worldServer->objectItemS = objectItem;
 	} else {
 		objectItem->prev = NULL;
@@ -250,9 +252,10 @@ void ServerConnect(UserServer* userServerUnsafe){
 	//character creater
 	Character character;
 	character.bomb = 1;
-	character.position = (Position) {100,100};
+	character.position = (Position) {1 * squaresize, 1 * squaresize};
 	character.type = CharacterTypeUser;
 	character.velocity = velocity;
+	character.name = userServer->name;
 
 	//character insert
 	CharacterItem* characterItem = (CharacterItem*) malloc(sizeof(CharacterItem));
