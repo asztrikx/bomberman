@@ -56,8 +56,16 @@ typedef struct CharacterItem{
 typedef struct{
 	ObjectItem* objectItemS;
 	CharacterItem* characterItemS;
+	Position* exit;
+} WorldServer;
+
+typedef struct{
+	Object* objectS;
+	int objectSLength;
+	Character* characterS;
+	int characterSLength;
 	Position* exit; //may not exists (for client)
-} World;
+} WorldClient;
 
 //Ability
 typedef struct{
@@ -72,19 +80,25 @@ typedef struct{
 
 //User
 typedef struct{
-	KeyItem* keyItemS; //if NULL then no key was pressed
-	char* name; //if NULL?, then no update
+	KeyItem* keyItemS;
+	char* name;
 	Ability* ablityS;
 	char* auth;
+} UserClient;
+
+typedef struct{
+	SDL_Keycode* keyS;
+	int keySLength;
+	char* name; //if NULL then no update
+	char* auth;
 	Character* character;
-	//??
-} User; //not seeable by others
+} UserServer;
 
 typedef struct UserItem{
-	User user;
+	UserServer userServer;
 	struct UserItem* next;
 	struct UserItem* prev;
-} UserItem;
+} UserServerItem;
 
 extern Ability AbilitySpeedExtra;
 
