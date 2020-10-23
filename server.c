@@ -1,4 +1,5 @@
 #include "server.h"
+#include <stdbool.h>
 #include "state.h"
 #include "network.h"
 
@@ -18,12 +19,15 @@ void ServerWorldGenerate(int height, int width){
 		int x = 0;
 
 		//object
-		Object* object = (Object*) malloc(sizeof(Object));
-		object->position = (Position){
-			.y = y,
-			.x = x,
+		Object object = (Object){
+			.created = tickCount,
+			.position = (Position){
+				.y = y,
+				.x = x,
+			},
+			.type = ObjectTypeWall,
+			.velocity = (Position){0,0},
 		};
-		object->type = ObjectTypeWall;
 
 		//objectItem
 		ObjectItem* objectItem = (ObjectItem*) malloc(sizeof(ObjectItem));
@@ -67,6 +71,130 @@ void ServerStart(void){
 	//start tick
 }
 
+bool collisionPositionS(Position position1, Position position2){
+	if(abs(position1.x - position2.x) >= squaresize){
+		return false;
+	}
+	if(abs(position1.y - position2.y) >= squaresize){
+		return false;
+	}
+	return true;
+}
+
+bool collisionObjectS(Position position){
+	ObjectItem* objectItem = world->objectItemS;
+	while(objectItem != NULL){
+		if(collisionPositionS(objectItem->object.position, position)){
+			return true;
+		}
+
+		objectItem = objectItem->next;
+	}
+	
+	return false;
+}
+
+bool collisionCharacterS(Position position, Character* characterException){
+	CharacterItem* characterItem = world->characterItemS;
+	while(characterItem != NULL){
+		if(
+			collisionPositionS(characterItem->character.position, position) &&
+			&(characterItem->character) != characterException
+		){
+			return true;
+		}
+
+		characterItem = characterItem->next;
+	}
+	
+	return false;
+}
+
+//keyMovement calculates new position based on keyItem.key
+void keyMovement(KeyItem* keyItem, User* user){
+	if(
+		keyItem->key != SDLK_w &&
+		keyItem->key != SDLK_a &&
+		keyItem->key != SDLK_s &&
+		keyItem->key != SDLK_d
+	){
+		return;
+	}
+
+	Position positionNew = user->character->position;
+	if(keyItem->key == SDLK_w){
+		positionNew.y -= user->character->velocity.y;
+	} else if(keyItem->key == SDLK_a){
+		positionNew.x -= user->character->velocity.x;
+	} else if(keyItem->key == SDLK_s){
+		positionNew.y += user->character->velocity.y;
+	} else if(keyItem->key == SDLK_d){
+		positionNew.x += user->character->velocity.x;
+	}
+
+	if(
+		collisionObjectS(positionNew) ||
+		collisionCharacterS(positionNew, user->character)
+	){
+		return;
+	}
+	
+	user->character->position = positionNew;
+}
+
+//keyBomb calculates bomb position based on keyItem.key
+void keyBomb(KeyItem* keyItem, User* user){
+	if(keyItem->key != SDLK_SPACE){
+		return;
+	}
+	return;
+
+	Position positionNew = user->character->position;
+
+	//position
+	if (positionNew.y % squaresize > squaresize / 2){
+		positionNew.y += squaresize;
+	}
+	if (positionNew.x % squaresize > squaresize / 2){
+		positionNew.x += squaresize;
+	}
+	positionNew.y -= positionNew.y % squaresize;
+	positionNew.x -= positionNew.x % squaresize;
+
+	//collision
+	if (
+		collisionObjectS(positionNew) ||
+		collisionCharacterS(positionNew, user->character)
+	){
+		return;
+	}
+
+	//bomb create
+	Object object = (Object) {
+		.created = tickCount,
+		.position = positionNew,
+		.type = ObjectTypeBomb,
+		.velocity = (Position){0, 0},
+	};
+
+	//bomb insert
+	ObjectItem* objectItem = (ObjectItem*) malloc(sizeof(Object));
+	objectItem->object = object;
+
+	if(world->objectItemS == NULL){ //first in list
+		objectItem->prev = NULL;
+		objectItem->next = NULL;
+		world->objectItemS = objectItem;
+	} else {
+		objectItem->prev = NULL;
+		objectItem->next = world->objectItemS;
+		
+		world->objectItemS->prev = objectItem;
+
+		world->objectItemS = objectItem;
+	}
+}
+
 //ServerReceive gets updates from users
 void ServerReceive(User* user){
 	//auth
@@ -93,56 +221,9 @@ void ServerReceive(User* user){
 	//key apply
 	KeyItem* keyItem = user->keyItemS;
 	while(keyItem != NULL){
-		printf("Received: %c\n", keyItem->key);
-		if(keyItem->key == SDLK_SPACE){
-			//position
-			Position position = userAuth->character->position;
-			if (userAuth->character->position.y % squaresize > squaresize / 2){
-				position.y += 1;
-			}
-			if (userAuth->character->position.x % squaresize > squaresize / 2){
-				position.x += 1;
-			}
+		keyBomb(keyItem, userAuth);
+		keyMovement(keyItem, userAuth);
 
-			//bomb create
-			Object* object = (Object*) malloc(sizeof(Object));
-			object->type = ObjectTypeBomb;
-			object->created = tickCount;
-			object->position = position;
-			object->velocity = (Position){0, 0};
-
-			//bomb insert
-			//position is empty
-			ObjectItem* objectItem = (ObjectItem*) malloc(sizeof(Object));
-			if(world->objectItemS == NULL){
-				objectItem->prev = NULL;
-				objectItem->next = NULL;
-				world->objectItemS = objectItem;
-			} else {
-				objectItem->prev = NULL;
-				objectItem->next = world->objectItemS;
-				
-				world->objectItemS->prev = objectItem;
-
-				world->objectItemS = objectItem;
-			}
-		} else if(keyItem->key == SDLK_w){
-			//[R]collision
-
-			userAuth->character->position.y -= userAuth->character->velocity.y;
-		} else if(keyItem->key == SDLK_a){
-			//[R]collision
-
-			userAuth->character->position.x -= userAuth->character->velocity.x;
-		} else if(keyItem->key == SDLK_s){
-			//[R]collision
-
-			userAuth->character->position.y += userAuth->character->velocity.y;
-		} else if(keyItem->key == SDLK_d){
-			//[R]collision
-
-			userAuth->character->position.x += userAuth->character->velocity.x;
-		}
 		keyItem = keyItem->next;
 	}
 }
