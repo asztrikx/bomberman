@@ -20,7 +20,7 @@ typedef struct{
 } Object;
 
 typedef struct ObjectItem{
-	Object* object;
+	Object object;
 	struct ObjectItem* next;
 	struct ObjectItem* prev;
 } ObjectItem; //Objects may be deleted frequently
