@@ -1,9 +1,9 @@
-#ifndef WORLD_H_INCLUDED
-#define WORLD_H_INCLUDED
+#ifndef STATE_H_INCLUDED
+#define STATE_H_INCLUDED
 
-#include "geometry.h"
 #include <SDL2/SDL.h>
 #include <stdbool.h>
+#include "geometry.h"
 
 //Object
 typedef enum{
@@ -25,36 +25,12 @@ typedef struct ObjectItem{
 	struct ObjectItem* prev;
 } ObjectItem; //Objects may be deleted frequently
 
-//World
-typedef struct{
-	ObjectItem* objectItemS;
-	CharacterItem* characterItemS;
-	Position* exit; //may not exists (for client)
-} World;
-
 //Key list
 typedef struct KeyItem{
 	SDL_Keycode key;
 	struct KeyItem* next;
 	struct KeyItem* prev;
 } KeyItem;
-
-//User
-typedef struct{
-	KeyItem* keyItemS; //if NULL then no key was pressed
-	char* name; //if NULL?, then no update
-	int nameLength;
-	Ability* ablityS;
-	char* auth;
-	Character* character;
-	//??
-} User; //not seeable by others
-
-typedef struct UserItem{
-	User user;
-	struct UserItem* next;
-	struct UserItem* prev;
-} UserItem;
 
 //Character
 typedef enum{
@@ -71,10 +47,17 @@ typedef struct{
 } Character; //seeable by others
 
 typedef struct CharacterItem{
-	Character* character;
+	Character character;
 	struct CharacterItem* next;
 	struct CharacterItem* prev;
 } CharacterItem; //Characters may be deleted frequently
+
+//World
+typedef struct{
+	ObjectItem* objectItemS;
+	CharacterItem* characterItemS;
+	Position* exit; //may not exists (for client)
+} World;
 
 //Ability
 typedef struct{
@@ -86,6 +69,22 @@ typedef struct{
 	bool bombPass;
 	bool wallPass;
 } Ability;
+
+//User
+typedef struct{
+	KeyItem* keyItemS; //if NULL then no key was pressed
+	char* name; //if NULL?, then no update
+	Ability* ablityS;
+	char* auth;
+	Character* character;
+	//??
+} User; //not seeable by others
+
+typedef struct UserItem{
+	User user;
+	struct UserItem* next;
+	struct UserItem* prev;
+} UserItem;
 
 extern Ability AbilitySpeedExtra;
 
