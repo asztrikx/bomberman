@@ -2,14 +2,24 @@
 #include "SDL.h"
 #include "client.h"
 #include "server.h"
+#include "time.h"
 
 int main(void) {
-	srand(time(0)); //better seed?
-
-	ServerStart();
+	srand(time(0)); //[R] better seed
 
 	SDLInit();
+
+	ServerStart();
 	ClientStart();
+
+	//key press
+	SDL_Event sdl_event;
+	while (SDL_WaitEvent(&sdl_event) && sdl_event.type != SDL_QUIT) {
+		if(sdl_event.type == SDL_KEYDOWN || sdl_event.type == SDL_KEYUP){
+			ClientEventKey(sdl_event);
+			SDL_RenderPresent(SDLRenderer);
+		}
+	}
 
 	SDL_Quit();
 	return 0;
