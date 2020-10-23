@@ -2,55 +2,13 @@
 #include "server.h"
 #include <stdbool.h>
 #include "state.h"
+#include "geometry.h"
 #include "network.h"
 
 static UserServerItem* userServerItemS;
 static WorldServer* worldServer;
 static long long tickCount = 0;
 static unsigned int tickRate = 60u;
-
-//[R] move to geom
-void ServerWorldGenerate(int height, int width){
-	worldServer = (WorldServer*) malloc(sizeof(WorldServer));
-	worldServer->objectItemS = NULL;
-	worldServer->characterItemS = NULL;
-	worldServer->exit = NULL;
-	
-	for(int i=0; i<height; i++){
-		int y = i * squaresize;
-		int x = 0;
-
-		//objectItem
-		ObjectItem* objectItem = (ObjectItem*) malloc(sizeof(ObjectItem));
-		objectItem->object = (Object){
-			.created = tickCount,
-			.position = (Position){
-				.y = y,
-				.x = x,
-			},
-			.type = ObjectTypeWall,
-			.velocity = (Position){0,0},
-		};
-		
-		//objectItemS first element
-		if(worldServer->objectItemS == NULL){
-			objectItem->next = NULL;
-			objectItem->prev = NULL;
-
-			worldServer->objectItemS = objectItem;
-
-			continue;
-		}
-
-		//objectItemS insert front
-		objectItem->next = worldServer->objectItemS;
-		objectItem->prev = NULL;
-
-		worldServer->objectItemS->prev = objectItem;
-
-		worldServer->objectItemS = objectItem;
-	}
-}
 
 //ServerTick calculates new frame, notifies users
 Uint32 ServerTick(Uint32 interval, void *param){
@@ -71,48 +29,9 @@ Uint32 ServerTick(Uint32 interval, void *param){
 
 //ServerStart generates world, start ticking
 void ServerStart(void){
-	ServerWorldGenerate(10, 10);
+	/*worldServer =*/ worldGenerate(10, 10);
 
 	SDL_AddTimer(1000u/tickRate, ServerTick, NULL);
-}
-//[R] move to geom
-bool collisionPositionS(Position position1, Position position2){
-	if(abs(position1.x - position2.x) >= squaresize){
-		return false;
-	}
-	if(abs(position1.y - position2.y) >= squaresize){
-		return false;
-	}
-	return true;
-}
-//[R] move to geom
-bool collisionObjectS(Position position){
-	ObjectItem* objectItem = worldServer->objectItemS;
-	while(objectItem != NULL){
-		if(collisionPositionS(objectItem->object.position, position)){
-			return true;
-		}
-
-		objectItem = objectItem->next;
-	}
-	
-	return false;
-}
-//[R] move to geom
-bool collisionCharacterS(Position position, Character* characterException){
-	CharacterItem* characterItem = worldServer->characterItemS;
-	while(characterItem != NULL){
-		if(
-			collisionPositionS(characterItem->character.position, position) &&
-			&(characterItem->character) != characterException
-		){
-			return true;
-		}
-
-		characterItem = characterItem->next;
-	}
-	
-	return false;
 }
 
 //keyMovement calculates user position based on keyItem.key
@@ -138,8 +57,8 @@ void keyMovement(SDL_Keycode key, UserServer* userServer){
 	}
 
 	if(
-		collisionObjectS(positionNew) ||
-		collisionCharacterS(positionNew, userServer->character)
+		collisionObjectS(worldServer->objectItemS, positionNew) ||
+		collisionCharacterS(worldServer->characterItemS, positionNew, userServer->character)
 	){
 		return;
 	}
@@ -168,8 +87,8 @@ void keyBomb(SDL_Keycode key, UserServer* userServer){
 
 	//collision
 	if (
-		collisionObjectS(positionNew) ||
-		collisionCharacterS(positionNew, userServer->character)
+		collisionObjectS(worldServer->objectItemS, positionNew) ||
+		collisionCharacterS(worldServer->characterItemS, positionNew, userServer->character)
 	){
 		return;
 	}

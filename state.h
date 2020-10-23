@@ -3,7 +3,11 @@
 
 #include <SDL2/SDL.h>
 #include <stdbool.h>
-#include "geometry.h"
+
+//Position
+typedef struct{
+	int y, x;
+} Position;
 
 //Object
 typedef enum{

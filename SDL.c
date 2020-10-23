@@ -1,11 +1,10 @@
 #include "debugmalloc.h"
 #include "SDL.h"
 #include <SDL2/SDL.h>
+#include "geometry.h"
 
 SDL_Window* SDLWindow;
 SDL_Renderer* SDLRenderer;
-int SDLWindowHeight = 480;
-int SDLWindowWidth = 640;
 
 void SDLInit(void){
 	//init
@@ -15,7 +14,7 @@ void SDLInit(void){
 	}
 
 	//window
-	SDLWindow = SDL_CreateWindow("alt", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, SDLWindowWidth, SDLWindowHeight, 0);
+	SDLWindow = SDL_CreateWindow("alt", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, windowWidth, windowHeight, 0);
 	if (SDLWindow == NULL) {
 		SDL_Log("sdl window: %s", SDL_GetError());
 		exit(1);
