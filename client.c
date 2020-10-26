@@ -17,85 +17,71 @@ static int tickId;
 
 //ClientSend sends updates to server
 Uint32 ClientSend(Uint32 interval, void *param){
+	//no keys pressed
 	if(userClient->keyItemS == NULL){
 		return interval;
 	}
 
 	if (SDL_LockMutex(mutex) != 0){
-		puts("ClientSend: mutex lock");
+		SDL_Log("ClientSend: SDL_LockMutex: %s", SDL_GetError());
 		exit(1);
 	}
 	
 	networkSendServer(userClient);
 
-	SDL_UnlockMutex(mutex);
+	if(SDL_UnlockMutex(mutex) < 0){
+		SDL_Log("ClientSend: mutex unlock: %s", SDL_GetError());
+		exit(1);
+	}
 
 	return interval;
 }
 
 void ClientEventKey(SDL_Event sdl_event){
 	if (SDL_LockMutex(mutex) != 0){
-		puts("ClientEventKey: mutex lock");
+		SDL_Log("ClientEventKey: SDL_LockMutex: %s", SDL_GetError());
 		exit(1);
 	}
 
 	//key list update
+	bool in = false;
 	KeyItem* keyItemCurrent = userClient->keyItemS;
 	while(keyItemCurrent != NULL){
-		if(keyItemCurrent->key == sdl_event.key.keysym.sym){
-			//key already in list
-			if(sdl_event.type == SDL_KEYDOWN){
-				SDL_UnlockMutex(mutex);
-				return;
-			}
+		if(keyItemCurrent->key != sdl_event.key.keysym.sym){
+			keyItemCurrent = keyItemCurrent->next;
+			continue;
+		}
+			
+		//key already in list
+		if(sdl_event.type == SDL_KEYDOWN){
+			in = true;
+			break;
+		}
 
-			//key in list, remove
-			if(sdl_event.type == SDL_KEYUP){
-				if(keyItemCurrent->prev == NULL){ //first in list
-					userClient->keyItemS = keyItemCurrent->next;
-
-					//last in list also
-					if(keyItemCurrent->next != NULL){
-						keyItemCurrent->next->prev = NULL;
-					}
-				} else if (keyItemCurrent->next == NULL) { //last in list, but not first
-					keyItemCurrent->prev->next = NULL;
-				} else {
-					keyItemCurrent->prev->next = keyItemCurrent->next;
-					keyItemCurrent->next->prev = keyItemCurrent->prev;
-				}
-
-				//free
-				free(keyItemCurrent);
-
-				SDL_UnlockMutex(mutex);
-				return;
-			}
+		//key in list, remove
+		if(sdl_event.type == SDL_KEYUP){
+			keyItemSRemove(&(userClient->keyItemS), keyItemCurrent);
+			break;
 		}
 
 		keyItemCurrent = keyItemCurrent->next;
 	}
 
 	//key not in list, add
-	if(sdl_event.type == SDL_KEYDOWN){
-		KeyItem* keyItem = (KeyItem*) malloc(sizeof(KeyItem));
-		keyItem->key = sdl_event.key.keysym.sym;
-
-		keyItem->next = userClient->keyItemS;
-		keyItem->prev = NULL;
-
-		if(userClient->keyItemS != NULL){
-			userClient->keyItemS->prev = keyItem;
-		}
-		
-		userClient->keyItemS = keyItem;
+	if(sdl_event.type == SDL_KEYDOWN && !in){
+		keyItemSInsert(&(userClient->keyItemS), &sdl_event.key.keysym.sym);
 	}
 
-	SDL_UnlockMutex(mutex);
+	if(SDL_UnlockMutex(mutex) < 0){
+		SDL_Log("ClientEventKey: mutex unlock: %s", SDL_GetError());
+		exit(1);
+	}
 }
 
 //ClientConnect connects to a server
 void ClientConnect(void){
+	networkClientStart();
+
 	networkConnectServer(userClient); //not critical section
 
 	//server updater
@@ -116,7 +102,7 @@ void ClientDraw(WorldClient* worldClient){
 		}
 	}
 	if(characterMe == NULL){
-		printf("I'm lost :(");
+		SDL_Log("ClientDraw: worldClient is missing player Me");
 		exit(1);
 	}
 
@@ -128,18 +114,18 @@ void ClientDraw(WorldClient* worldClient){
 
 	//clear & background
 	if(SDL_SetRenderDrawColor(SDLRenderer, 0, 255, 0, 255) < 0){
-		SDL_Log("SDL_SetRenderDrawColor: %s", SDL_GetError());
+		SDL_Log("ClientDraw: SDL_SetRenderDrawColor: %s", SDL_GetError());
 		exit(1);
 	}
 	if(SDL_RenderClear(SDLRenderer) < 0){
-		SDL_Log("SDL_RenderClear: %s", SDL_GetError());
+		SDL_Log("ClientDraw: SDL_RenderClear: %s", SDL_GetError());
 		exit(1);
 	}
 
 	//exit
 	if(worldClient->exit != NULL){
 		if (SDL_SetRenderDrawColor(SDLRenderer, 255, 255, 0, 255) < 0) {
-			SDL_Log("SDL_SetRenderDrawColor: %s", SDL_GetError());
+			SDL_Log("ClientDraw: SDL_SetRenderDrawColor: %s", SDL_GetError());
 			exit(1);
 		}
 
@@ -149,7 +135,7 @@ void ClientDraw(WorldClient* worldClient){
 			.w = squaresize,
 			.h = squaresize,
 		}) < 0){
-			SDL_Log("SDL_RenderFillRect: %s", SDL_GetError());
+			SDL_Log("ClientDraw: SDL_RenderFillRect: %s", SDL_GetError());
 			exit(1);
 		}
 	}
@@ -157,7 +143,7 @@ void ClientDraw(WorldClient* worldClient){
 	//object
 	for(int i=0; i<worldClient->objectSLength; i++){
 		if (SDL_SetRenderDrawColor(SDLRenderer, 255, 0, 0, 255) < 0) {
-			SDL_Log("SDL_SetRenderDrawColor: %s", SDL_GetError());
+			SDL_Log("ClientDraw: SDL_SetRenderDrawColor: %s", SDL_GetError());
 			exit(1);
 		}
 
@@ -167,7 +153,7 @@ void ClientDraw(WorldClient* worldClient){
 			.w = squaresize,
 			.h = squaresize,
 		}) < 0){
-			SDL_Log("SDL_RenderFillRect: %s", SDL_GetError());
+			SDL_Log("ClientDraw: SDL_RenderFillRect: %s", SDL_GetError());
 			exit(1);
 		}
 	}
@@ -175,7 +161,7 @@ void ClientDraw(WorldClient* worldClient){
 	//character
 	for(int i=0; i<worldClient->characterSLength; i++){
 		if (SDL_SetRenderDrawColor(SDLRenderer, 0, 0, 255, 255) < 0) {
-			SDL_Log("SDL_SetRenderDrawColor: %s", SDL_GetError());
+			SDL_Log("ClientDraw: SDL_SetRenderDrawColor: %s", SDL_GetError());
 			exit(1);
 		}
 
@@ -185,7 +171,7 @@ void ClientDraw(WorldClient* worldClient){
 			.w = squaresize,
 			.h = squaresize,
 		}) < 0){
-			SDL_Log("SDL_RenderFillRect: %s", SDL_GetError());
+			SDL_Log("ClientDraw: SDL_RenderFillRect: %s", SDL_GetError());
 			exit(1);
 		}
 	}
@@ -228,10 +214,12 @@ void ClientDraw(WorldClient* worldClient){
 		SDL_DestroyTexture(Message);
 	}
 
+	//render
 	SDL_RenderPresent(SDLRenderer);
 }
 
 //ClientReceive gets updates from server
+//worldCopy is not used after return
 void ClientReceive(WorldClient* worldCopy){
 	ClientDraw(worldCopy);
 }
@@ -246,11 +234,21 @@ void ClientStart(void){
 
 	//userClient create
 	//not critical section
+	/**/
+	userClient = &(UserClient){
+		.ablityS = NULL,
+		.auth = NULL,
+		.keyItemS = NULL,
+		.name = (char*) malloc((15 + 1) * sizeof(char)),
+	};
+	/**/
+	/*
 	userClient = (UserClient*) malloc(sizeof(UserClient));
 	userClient->ablityS = NULL;
 	userClient->auth = NULL;
 	userClient->keyItemS = NULL;
 	userClient->name = (char*) malloc((15 + 1) * sizeof(char));
+	*/
 
 	//userClient load
 	strcpy(userClient->name, "asd"); //load abstraction
@@ -258,24 +256,21 @@ void ClientStart(void){
 
 void ClientStop(void){
 	if (SDL_LockMutex(mutex) != 0){
-		puts("ClientStop: mutex lock");
+		SDL_Log("ClientStop: SDL_LockMutex: %s", SDL_GetError());
 		exit(1);
 	}
 
-	SDL_RemoveTimer(tickId);
+	networkClientStop();
 
-	free(userClient->name);
-	free(userClient->auth);
-
-	KeyItem* keyItemCurrent = userClient->keyItemS;
-	KeyItem* keyItemPrev;
-	while(keyItemCurrent != NULL){
-		keyItemPrev = keyItemCurrent;
-		keyItemCurrent = keyItemCurrent->next;
-
-		free(keyItemPrev);
+	if(!SDL_RemoveTimer(tickId)){
+		SDL_Log("ClientStop: SDL_RemoveTimer: %s", SDL_GetError());
+		exit(1);
 	}
 
+	//abilitySFree(userClient->ablityS);
+	free(userClient->auth);
+	keyItemSFree(userClient->keyItemS);
+	free(userClient->name);
 	free(userClient);
 
 	SDL_DestroyMutex(mutex);

@@ -13,6 +13,14 @@ void networkServerStart(void){
 	serverStop = false;
 }
 
+bool clientStop = true;
+void networkClientStop(void){
+	clientStop = true;
+}
+void networkClientStart(void){
+	clientStop = false;
+}
+
 //networkSendClient send worldServer to client as WorldClient
 //worldServer is not locked with mutex
 void networkSendClient(WorldServer* worldServer){
@@ -45,7 +53,7 @@ void networkSendClient(WorldServer* worldServer){
 		objectItemCurrent = objectItemCurrent->next;
 	}
 
-	//characterS
+	//characterS length
 	int characterSLength = 0;
 	CharacterItem* characterItemCurrent = worldServer->characterItemS;
 	while(characterItemCurrent != NULL){
@@ -55,6 +63,7 @@ void networkSendClient(WorldServer* worldServer){
 	}
 	worldClient->characterSLength = characterSLength;
 
+	//characterS
 	worldClient->characterS = (Character*) malloc(characterSLength * sizeof(Character));
 	characterItemCurrent = worldServer->characterItemS;
 	for(int i=0; i<characterSLength; i++){
@@ -74,32 +83,34 @@ void networkSendClient(WorldServer* worldServer){
 }
 
 //networkSendServer send userClient to server as UserServer
+//keyItemS length must be greater than zero
 void networkSendServer(UserClient* userClient){
-	//copy keyItemS
+	//keyItemS length
 	int keySLength = 0;
-	KeyItem* keyItem = userClient->keyItemS;
-	while(keyItem != NULL){
+	KeyItem* keyItemCurrent = userClient->keyItemS;
+	while(keyItemCurrent != NULL){
 		++keySLength;
 
-		keyItem = keyItem->next;
+		keyItemCurrent = keyItemCurrent->next;
 	}
 
-	SDL_Keycode* keyS = (SDL_Keycode*) malloc(keySLength * sizeof(SDL_Keycode));//NULL if 0
-	keyItem = userClient->keyItemS;
+	//keyItemS copy
+	SDL_Keycode* keyS = (SDL_Keycode*) malloc(keySLength * sizeof(SDL_Keycode));
+	keyItemCurrent = userClient->keyItemS;
 	for(int i=0; i<keySLength; i++){
-		keyS[i] = keyItem->key;
+		keyS[i] = keyItemCurrent->key;
 
-		keyItem = keyItem->next;
+		keyItemCurrent = keyItemCurrent->next;
 	}
 
 	//create userServer
-	UserServer* userServer = (UserServer*) malloc(sizeof(UserServer));
-	userServer->auth = (char*) malloc((26 + 1) * sizeof(char));
-	userServer->character = NULL;
-	userServer->keyS = keyS;
-	userServer->keySLength = keySLength;
-	userServer->name = (char*) malloc((15 + 1) * sizeof(char));
-
+	UserServer* userServer = &(UserServer){
+		.auth = (char*) malloc((26 + 1) * sizeof(char)),
+		.character = NULL,
+		.keyS = keyS,
+		.keySLength = keySLength,
+		.name = (char*) malloc((15 + 1) * sizeof(char)),
+	};
 	strcpy(userServer->auth, userClient->auth);
 	strcpy(userServer->name, userClient->name);
 
@@ -110,20 +121,21 @@ void networkSendServer(UserClient* userClient){
 
 	//free
 	free(userServer->auth);
+	free(userServer->character); //in best case it's free(NULL)
 	free(userServer->keyS);
 	free(userServer->name);
-	free(userServer);
 }
 
 //networkConnectServer client request to server to create connection
 void networkConnectServer(UserClient* userClient){
 	//copy
-	UserServer* userServer = (UserServer*) malloc(sizeof(UserServer));
-	userServer->auth = NULL;
-	userServer->character = NULL;
-	userServer->keyS = NULL;
-	userServer->keySLength = 0;
-	userServer->name = (char*) malloc((15 + 1) * sizeof(char));
+	UserServer* userServer = &(UserServer){
+		.auth = NULL,
+		.character = NULL,
+		.keyS = NULL,
+		.keySLength = 0,
+		.name = (char*) malloc((15 + 1) * sizeof(char)),
+	};
 	strcpy(userServer->name, userClient->name);
 
 	//send
@@ -134,19 +146,18 @@ void networkConnectServer(UserClient* userClient){
 		//network abstraction
 	}
 
+	//[R] handle timeout
+
 	//apply changes
 	free(userClient->auth); //in best case it's free(NULL)
 	userClient->auth = (char*) malloc((26 + 1) * sizeof(char));
 
 	strncpy(userClient->auth, userServer->auth, 26);
 	userClient->auth[26] = '\0';
-	strncpy(userClient->name, userServer->name, 15);
+	strncpy(userClient->name, userServer->name, 15); //name could be occupied
 	userClient->name[15] = '\0';
 
 	//free
-	free(userServer->auth);
-	free(userServer->character); //in best case it's free(NULL)
-	free(userServer->keyS); //in best case it's free(NULL)
 	free(userServer->name);
-	free(userServer);
+	free(userServer->auth); //reply from server
 }

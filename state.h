@@ -97,7 +97,7 @@ typedef struct{
 	int keySLength;
 	char* name; //if NULL then no update
 	char* auth;
-	Character* character;
+	Character* character; //handled by characterItem
 } UserServer;
 
 typedef struct UserItem{
@@ -108,8 +108,14 @@ typedef struct UserItem{
 
 extern Ability AbilitySpeedExtra;
 
+KeyItem* keyItemSInsert(KeyItem** keyItemS, SDL_Keycode* key);
+void keyItemSRemove(KeyItem** keyItemS, KeyItem* keyItem);
+void keyItemSFree(KeyItem* keyItemS);
 ObjectItem* objectItemSInsert(ObjectItem** objectItemS, Object* object);
+void objectItemSFree(ObjectItem* objectItemS);
 CharacterItem* characterItemSInsert(CharacterItem** characterItemS, Character* character);
+void characterItemSFree(CharacterItem* characterItemS);
 UserServerItem* userServerItemSInsert(UserServerItem** userServerItemS, UserServer* userServer);
+void userServerItemSFree(UserServerItem* userServerItemS);
 
 #endif

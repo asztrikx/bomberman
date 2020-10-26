@@ -50,7 +50,7 @@ bool collisionCharacterS(CharacterItem* characterItemS, Position position, Chara
 //free should be called
 WorldServer* worldGenerate(int height, int width){
 	if(height % 2 != 1 || width % 2 != 1){
-		puts("World size is malformed");
+		SDL_Log("World size is malformed");
 		exit(1);
 	}
 

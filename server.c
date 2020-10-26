@@ -54,7 +54,7 @@ char* ServerAuthCreate(){
 //ServerTick calculates new frame, notifies users
 Uint32 ServerTick(Uint32 interval, void *param){
 	if(SDL_LockMutex(mutex) != 0){
-		SDL_Log("ServerTick: mutex lock: %s", SDL_GetError());
+		SDL_Log("ServerTick: SDL_LockMutex: %s", SDL_GetError());
 		exit(1);
 	}
 
@@ -162,37 +162,20 @@ void keyBomb(SDL_Keycode key, UserServer* userServer){
 		return;
 	}
 
-	//bomb create
-	Object object = (Object) {
+	//bomb insert
+	objectItemSInsert(&(worldServer->objectItemS), &(Object){
 		.created = tickCount,
 		.position = positionNew,
 		.type = ObjectTypeBomb,
 		.velocity = (Position){0, 0},
-	};
-
-	//bomb insert
-	ObjectItem* objectItem = (ObjectItem*) malloc(sizeof(Object));
-	objectItem->object = object;
-
-	if(worldServer->objectItemS == NULL){ //first in list
-		objectItem->prev = NULL;
-		objectItem->next = NULL;
-		
-		worldServer->objectItemS = objectItem;
-	} else {
-		objectItem->prev = NULL;
-		objectItem->next = worldServer->objectItemS;
-		
-		worldServer->objectItemS->prev = objectItem;
-
-		worldServer->objectItemS = objectItem;
-	}
+	});
 }
 
 //ServerReceive gets updates from users
+//userServerUnsafe is not used after return
 void ServerReceive(UserServer* userServerUnsafe){
 	if (SDL_LockMutex(mutex) != 0){
-		puts("ServerReceive: mutex lock");
+		SDL_Log("ServerReceive: SDL_LockMutex: %s", SDL_GetError());
 		exit(1);
 	}
 
@@ -203,81 +186,56 @@ void ServerReceive(UserServer* userServerUnsafe){
 	}
 
 	//name change
-	if(
-		userServerUnsafe != NULL &&
-		strncmp(userServer->name, userServerUnsafe->name, 15) != 0
-	){
+	if(strncmp(userServer->name, userServerUnsafe->name, 15) != 0){
 		strncpy(userServer->name, userServerUnsafe->name, 15);
+		userServer->name[15] = '\0'; //in best case it's already padded
 	}
 
 	//keyS apply
-	for(int i=0; i<userServerUnsafe->keySLength; i++){
+	for(int i=0; i<userServerUnsafe->keySLength; i++){ //[R] keySLength may be falsified
 		keyBomb(userServerUnsafe->keyS[i], userServer);
 		keyMovement(userServerUnsafe->keyS[i], userServer);
 	}
 
-	SDL_UnlockMutex(mutex);
+	if(SDL_UnlockMutex(mutex) < 0){
+		SDL_Log("ServerReceive: mutex unlock: %s", SDL_GetError());
+		exit(1);
+	}
 }
 
 //ServerStop clears server module
 void ServerStop(void){
 	if (SDL_LockMutex(mutex) != 0){
-		puts("ServerStop: mutex lock");
+		SDL_Log("ServerStop: SDL_LockMutex: %s", SDL_GetError());
 		exit(1);
 	}
 
 	networkServerStop();
-	SDL_RemoveTimer(tickId);
 
-	//exit
+	if(!SDL_RemoveTimer(tickId)){
+		SDL_Log("ServerStop: SDL_RemoveTimer: %s", SDL_GetError());
+		exit(1);
+	}
+
+	//free worldServer
 	free(worldServer->exit);
-	
-	//characterItems
-	CharacterItem* characterItemCurrent = worldServer->characterItemS;
-	CharacterItem* characterItemPrev;
-	while(characterItemCurrent != NULL){
-		characterItemPrev = characterItemCurrent;
-		characterItemCurrent = characterItemCurrent->next;
-
-		//free(characterItemPrev->character.name); //it a pointer to userServer
-		free(characterItemPrev);
-	}
-
-	//objectItems
-	ObjectItem* objectItemCurrent = worldServer->objectItemS;
-	ObjectItem* objectItemPrev;
-	while(objectItemCurrent != NULL){
-		objectItemPrev = objectItemCurrent;
-		objectItemCurrent = objectItemCurrent->next;
-
-		free(objectItemPrev);
-	}
-
-	//worldServer
+	characterItemSFree(worldServer->characterItemS);
+	objectItemSFree(worldServer->objectItemS);
 	free(worldServer);
 
-	//userItemS
-	UserServerItem* userServerItemCurrent = userServerItemS;
-	UserServerItem* userServerItemPrev;
-	while(userServerItemCurrent != NULL){
-		userServerItemPrev = userServerItemCurrent;
-		userServerItemCurrent = userServerItemCurrent->next;
-
-		free(userServerItemPrev->userServer.auth);
-		free(userServerItemPrev->userServer.name);
-		free(userServerItemPrev->userServer.keyS); //NULL
-		free(userServerItemPrev);
-	}
+	//free userItemS
+	userServerItemSFree(userServerItemS);
 
 	SDL_DestroyMutex(mutex);
 }
 
 //ServerConnect register new connection user, returns it with auth
+//userServerUnsafe is not used after return
 void ServerConnect(UserServer* userServerUnsafe){
 	//[R]check if game is running
 
 	if (SDL_LockMutex(mutex) != 0){
-		SDL_Log("ServerConnect: mutex lock: %s", SDL_GetError());
+		SDL_Log("ServerConnect: SDL_LockMutex: %s", SDL_GetError());
 		exit(1);
 	}
 
@@ -291,7 +249,7 @@ void ServerConnect(UserServer* userServerUnsafe){
 	});
 	UserServer* userServer = &(userServerItem->userServer);
 	strncpy(userServer->name, userServerUnsafe->name, 15);
-	userServer->name[16] = '\0';
+	userServer->name[15] = '\0';
 
 	//id generate
 	while (true){

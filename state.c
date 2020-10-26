@@ -3,6 +3,57 @@
 #include "geometry.h"
 #include <stdlib.h>
 
+KeyItem* keyItemSInsert(KeyItem** keyItemS, SDL_Keycode* key){
+	KeyItem* keyItem = (KeyItem*) malloc(sizeof(KeyItem));
+	keyItem->key = *key;
+
+	if(*keyItemS == NULL){ //first element
+		keyItem->next = NULL;
+		keyItem->prev = NULL;
+
+		*keyItemS = keyItem;
+	} else { //insert front
+		keyItem->next = *keyItemS;
+		keyItem->prev = NULL;
+
+		(*keyItemS)->prev = keyItem;
+
+		(*keyItemS) = keyItem;
+	}
+
+	return keyItem;
+}
+
+void keyItemSRemove(KeyItem** keyItemS, KeyItem* keyItem){
+	if(keyItem->prev == NULL){ //first in list
+		*keyItemS = keyItem->next;
+
+		//last in list also
+		if(keyItem->next != NULL){
+			keyItem->next->prev = NULL;
+		}
+	} else if (keyItem->next == NULL) { //last in list, but not first
+		keyItem->prev->next = NULL;
+	} else {
+		keyItem->prev->next = keyItem->next;
+		keyItem->next->prev = keyItem->prev;
+	}
+
+	//free
+	free(keyItem);
+}
+
+void keyItemSFree(KeyItem* keyItemS){
+	KeyItem* keyItemCurrent = keyItemS;
+	KeyItem* keyItemPrev;
+	while(keyItemCurrent != NULL){
+		keyItemPrev = keyItemCurrent;
+		keyItemCurrent = keyItemCurrent->next;
+
+		free(keyItemPrev);
+	}
+}
+
 Ability AbilitySpeedExtra = {
 	.speedExtra = 10,
 };
@@ -28,6 +79,17 @@ ObjectItem* objectItemSInsert(ObjectItem** objectItemS, Object* object){
 	return objectItem;
 }
 
+void objectItemSFree(ObjectItem* objectItemS){
+	ObjectItem* objectItemCurrent = objectItemS;
+	ObjectItem* objectItemPrev;
+	while(objectItemCurrent != NULL){
+		objectItemPrev = objectItemCurrent;
+		objectItemCurrent = objectItemCurrent->next;
+
+		free(objectItemPrev);
+	}
+}
+
 CharacterItem* characterItemSInsert(CharacterItem** characterItemS, Character* character){
 	CharacterItem* characterItem = (CharacterItem*) malloc(sizeof(CharacterItem));
 	characterItem->character = *character;
@@ -49,6 +111,17 @@ CharacterItem* characterItemSInsert(CharacterItem** characterItemS, Character* c
 	return characterItem;
 }
 
+void characterItemSFree(CharacterItem* characterItemS){
+	CharacterItem* characterItemCurrent = characterItemS;
+	CharacterItem* characterItemPrev;
+	while(characterItemCurrent != NULL){
+		characterItemPrev = characterItemCurrent;
+		characterItemCurrent = characterItemCurrent->next;
+
+		free(characterItemPrev);
+	}
+}
+
 UserServerItem* userServerItemSInsert(UserServerItem** userServerItemS, UserServer* userServer){
 	UserServerItem* userServerItem = (UserServerItem*) malloc(sizeof(UserServerItem));
 	userServerItem->userServer = *userServer;
@@ -68,4 +141,19 @@ UserServerItem* userServerItemSInsert(UserServerItem** userServerItemS, UserServ
 	}
 
 	return userServerItem;
+}
+
+void userServerItemSFree(UserServerItem* userServerItemS){
+	UserServerItem* userServerItemCurrent = userServerItemS;
+	UserServerItem* userServerItemPrev;
+	while(userServerItemCurrent != NULL){
+		userServerItemPrev = userServerItemCurrent;
+		userServerItemCurrent = userServerItemCurrent->next;
+
+		free(userServerItemPrev->userServer.auth);
+		//free(userServerItemPrev->userServer.character); //it is free'd by characterItemSFree
+		free(userServerItemPrev->userServer.keyS); //in best case it's free(NULL)
+		free(userServerItemPrev->userServer.name);
+		free(userServerItemPrev);
+	}
 }
