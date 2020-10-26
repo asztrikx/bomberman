@@ -5,7 +5,16 @@
 #include "client.h"
 #include "state.h"
 
+bool serverStop = true;
+void networkServerStop(void){
+	serverStop = true;
+}
+void networkServerStart(void){
+	serverStop = false;
+}
+
 //networkSendClient send worldServer to client as WorldClient
+//worldServer is not locked with mutex
 void networkSendClient(WorldServer* worldServer){
 	WorldClient* worldClient = (WorldClient*) malloc(sizeof(WorldClient));
 
@@ -13,10 +22,11 @@ void networkSendClient(WorldServer* worldServer){
 	if(worldServer->exit == NULL){
 		worldClient->exit = NULL;
 	} else {
+		worldClient->exit = (Position*) malloc(sizeof(Position));
 		*(worldClient->exit) = *(worldServer->exit);
 	}
 	
-	//objectS
+	//objectS length
 	int objectSLength = 0;
 	ObjectItem* objectItemCurrent = worldServer->objectItemS;
 	while(objectItemCurrent != NULL){
@@ -26,6 +36,7 @@ void networkSendClient(WorldServer* worldServer){
 	}
 	worldClient->objectSLength = objectSLength;
 
+	//objectS
 	worldClient->objectS = (Object*) malloc(objectSLength * sizeof(Object));
 	objectItemCurrent = worldServer->objectItemS;
 	for(int i=0; i<objectSLength; i++){
@@ -53,9 +64,10 @@ void networkSendClient(WorldServer* worldServer){
 	}
 
 	//send
-	ClientReceive(worldClient);
+	ClientReceive(worldClient); //network abstraction
 
 	//free
+	free(worldClient->exit);
 	free(worldClient->objectS);
 	free(worldClient->characterS);
 	free(worldClient);
@@ -92,7 +104,9 @@ void networkSendServer(UserClient* userClient){
 	strcpy(userServer->name, userClient->name);
 
 	//send
-	ServerReceive(userServer); //network abstraction
+	if(!serverStop){
+		ServerReceive(userServer); //network abstraction
+	}
 
 	//free
 	free(userServer->auth);
@@ -105,7 +119,7 @@ void networkSendServer(UserClient* userClient){
 void networkConnectServer(UserClient* userClient){
 	//copy
 	UserServer* userServer = (UserServer*) malloc(sizeof(UserServer));
-	userServer->auth = (char*) malloc((26 + 1) * sizeof(char));
+	userServer->auth = NULL;
 	userServer->character = NULL;
 	userServer->keyS = NULL;
 	userServer->keySLength = 0;
@@ -113,12 +127,15 @@ void networkConnectServer(UserClient* userClient){
 	strcpy(userServer->name, userClient->name);
 
 	//send
-	ServerConnect(userServer); //network abstraction
+	if(!serverStop){
+		ServerConnect(userServer); //network abstraction
 
-	//receive
-	//network abstraction
+		//receive
+		//network abstraction
+	}
 
 	//apply changes
+	free(userClient->auth); //in best case it's free(NULL)
 	userClient->auth = (char*) malloc((26 + 1) * sizeof(char));
 
 	strncpy(userClient->auth, userServer->auth, 26);
@@ -128,6 +145,8 @@ void networkConnectServer(UserClient* userClient){
 
 	//free
 	free(userServer->auth);
+	free(userServer->character); //in best case it's free(NULL)
+	free(userServer->keyS); //in best case it's free(NULL)
 	free(userServer->name);
 	free(userServer);
 }
