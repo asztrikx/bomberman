@@ -40,6 +40,7 @@ typedef struct KeyItem{
 typedef enum{
 	CharacterTypeUser,
 	CharacterTypeEnemy,
+	CharacterTypeYou,
 } CharacterType;
 
 typedef struct{
@@ -48,6 +49,7 @@ typedef struct{
 	Position velocity;
 	int bomb;
 	//Object* bombS; //why?
+	char* name;
 } Character; //seeable by others
 
 typedef struct CharacterItem{
@@ -105,5 +107,9 @@ typedef struct UserItem{
 } UserServerItem;
 
 extern Ability AbilitySpeedExtra;
+
+ObjectItem* objectItemSInsert(ObjectItem** objectItemS, Object* object);
+CharacterItem* characterItemSInsert(CharacterItem** characterItemS, Character* character);
+UserServerItem* userServerItemSInsert(UserServerItem** userServerItemS, UserServer* userServer);
 
 #endif
