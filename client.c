@@ -234,21 +234,11 @@ void ClientStart(void){
 
 	//userClient create
 	//not critical section
-	/**/
-	userClient = &(UserClient){
-		.ablityS = NULL,
-		.auth = NULL,
-		.keyItemS = NULL,
-		.name = (char*) malloc((15 + 1) * sizeof(char)),
-	};
-	/**/
-	/*
 	userClient = (UserClient*) malloc(sizeof(UserClient));
 	userClient->ablityS = NULL;
 	userClient->auth = NULL;
 	userClient->keyItemS = NULL;
 	userClient->name = (char*) malloc((15 + 1) * sizeof(char));
-	*/
 
 	//userClient load
 	strcpy(userClient->name, "asd"); //load abstraction
