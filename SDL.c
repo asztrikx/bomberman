@@ -1,6 +1,7 @@
 #include "debugmalloc.h"
 #include "SDL.h"
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_ttf.h>
 #include "geometry.h"
 
 SDL_Window* SDLWindow;
@@ -9,6 +10,11 @@ SDL_Renderer* SDLRenderer;
 void SDLInit(void){
 	//init
 	if (SDL_Init(SDL_INIT_EVERYTHING) < 0) {
+		SDL_Log("sdl init: %s", SDL_GetError());
+		exit(1);
+	}
+
+	if (TTF_Init() < 0) {
 		SDL_Log("sdl init: %s", SDL_GetError());
 		exit(1);
 	}
