@@ -9,28 +9,43 @@
 #include "geometry.h"
 #include "network.h"
 
+static SDL_mutex* mutex;
 static UserClient* userClient;
 //static long long tickCount = 0; //should be fine for years?
 static unsigned int tickRate = 60u;
+static int tickId;
 
 //ClientSend sends updates to server
 Uint32 ClientSend(Uint32 interval, void *param){
 	if(userClient->keyItemS == NULL){
 		return interval;
 	}
+
+	if (SDL_LockMutex(mutex) != 0){
+		puts("ClientSend: mutex lock");
+		exit(1);
+	}
 	
 	networkSendServer(userClient);
+
+	SDL_UnlockMutex(mutex);
 
 	return interval;
 }
 
 void ClientEventKey(SDL_Event sdl_event){
+	if (SDL_LockMutex(mutex) != 0){
+		puts("ClientEventKey: mutex lock");
+		exit(1);
+	}
+
 	//key list update
 	KeyItem* keyItemCurrent = userClient->keyItemS;
 	while(keyItemCurrent != NULL){
 		if(keyItemCurrent->key == sdl_event.key.keysym.sym){
 			//key already in list
 			if(sdl_event.type == SDL_KEYDOWN){
+				SDL_UnlockMutex(mutex);
 				return;
 			}
 
@@ -53,6 +68,7 @@ void ClientEventKey(SDL_Event sdl_event){
 				//free
 				free(keyItemCurrent);
 
+				SDL_UnlockMutex(mutex);
 				return;
 			}
 		}
@@ -74,14 +90,20 @@ void ClientEventKey(SDL_Event sdl_event){
 		
 		userClient->keyItemS = keyItem;
 	}
+
+	SDL_UnlockMutex(mutex);
 }
 
 //ClientConnect connects to a server
 void ClientConnect(void){
-	networkConnectServer(userClient);
+	networkConnectServer(userClient); //not critical section
 
 	//server updater
-	SDL_AddTimer(1000u/tickRate, ClientSend, NULL);
+	tickId = SDL_AddTimer(1000u/tickRate, ClientSend, NULL);
+	if (tickId == 0){
+		SDL_Log("SDL_AddTimer: %s", SDL_GetError());
+		exit(1);
+	}
 }
 
 void ClientDraw(WorldClient* worldClient){
@@ -215,7 +237,15 @@ void ClientReceive(WorldClient* worldCopy){
 }
 
 void ClientStart(void){
+	//mutex init
+	mutex = SDL_CreateMutex();
+	if (!mutex){
+		SDL_Log("ClientStart: mutex create: %s", SDL_GetError());
+		exit(1);
+	}
+
 	//userClient create
+	//not critical section
 	userClient = (UserClient*) malloc(sizeof(UserClient));
 	userClient->ablityS = NULL;
 	userClient->auth = NULL;
@@ -223,5 +253,30 @@ void ClientStart(void){
 	userClient->name = (char*) malloc((15 + 1) * sizeof(char));
 
 	//userClient load
-	strcpy(userClient->name, "asd");
+	strcpy(userClient->name, "asd"); //load abstraction
+}
+
+void ClientStop(void){
+	if (SDL_LockMutex(mutex) != 0){
+		puts("ClientStop: mutex lock");
+		exit(1);
+	}
+
+	SDL_RemoveTimer(tickId);
+
+	free(userClient->name);
+	free(userClient->auth);
+
+	KeyItem* keyItemCurrent = userClient->keyItemS;
+	KeyItem* keyItemPrev;
+	while(keyItemCurrent != NULL){
+		keyItemPrev = keyItemCurrent;
+		keyItemCurrent = keyItemCurrent->next;
+
+		free(keyItemPrev);
+	}
+
+	free(userClient);
+
+	SDL_DestroyMutex(mutex);
 }

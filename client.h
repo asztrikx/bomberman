@@ -3,9 +3,10 @@
 
 #include "state.h"
 
-void ClientReceive(WorldClient* worldCopy);
-void ClientStart(void);
 void ClientEventKey(SDL_Event sdl_event);
 void ClientConnect(void);
+void ClientReceive(WorldClient* worldCopy);
+void ClientStart(void);
+void ClientStop(void);
 
 #endif
