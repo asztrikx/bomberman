@@ -22,6 +22,8 @@ int main(void) {
 		}
 	}
 
+	ServerStop();
+	ClientStop();
 	SDL_Quit();
 	return 0;
 }
