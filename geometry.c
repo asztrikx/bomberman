@@ -49,44 +49,34 @@ bool collisionCharacterS(CharacterItem* characterItemS, Position position, Chara
 //worldGenerate generates default map
 //free should be called
 WorldServer* worldGenerate(int height, int width){
+	if(height % 2 != 1 || width % 2 != 1){
+		puts("World size is malformed");
+		exit(1);
+	}
+
 	WorldServer* worldServer = (WorldServer*) malloc(sizeof(WorldServer));
 	worldServer->objectItemS = NULL;
 	worldServer->characterItemS = NULL;
 	worldServer->exit = NULL;
 	
 	for(int i=0; i<height; i++){
-		int y = i * squaresize;
-		int x = 0;
-
-		//objectItem
-		ObjectItem* objectItem = (ObjectItem*) malloc(sizeof(ObjectItem));
-		objectItem->object = (Object){
-			.created = -1,
-			.position = (Position){
-				.y = y,
-				.x = x,
-			},
-			.type = ObjectTypeWall,
-			.velocity = (Position){0,0},
-		};
-		
-		//objectItemS first element
-		if(worldServer->objectItemS == NULL){
-			objectItem->next = NULL;
-			objectItem->prev = NULL;
-
-			worldServer->objectItemS = objectItem;
-
-			continue;
+		for(int j=0; j<width; j++){
+			if(
+				i == 0 || j == 0 ||
+				i == height - 1 || j == width - 1 ||
+				(i % 2 == 0 && j % 2 == 0)
+			){
+				objectItemSInsert(&(worldServer->objectItemS), &(Object){
+					.created = -1,
+					.position = (Position){
+						.y = i * squaresize,
+						.x = j * squaresize,
+					},
+					.type = ObjectTypeWall,
+					.velocity = (Position){0,0},
+				});
+			}
 		}
-
-		//objectItemS insert front
-		objectItem->next = worldServer->objectItemS;
-		objectItem->prev = NULL;
-
-		worldServer->objectItemS->prev = objectItem;
-
-		worldServer->objectItemS = objectItem;
 	}
 
 	return worldServer;
