@@ -133,11 +133,11 @@ void keyMovement(SDL_Keycode key, UserServer* userServer){
 		characterItemCollisionS != NULL &&
 		(
 			characterItemCollisionS->next != NULL ||
-			&(characterItemCollisionS->character) != userServer->character
+			characterItemCollisionS->character != userServer->character
 		)
 	){
-		objectItemSFree(objectItemCollisionS);
-		characterItemSFree(characterItemCollisionS);
+		objectItemSFree(objectItemCollisionS, false);
+		characterItemSFree(characterItemCollisionS, false);
 		return;
 	}
 	if(objectItemCollisionS != NULL){
@@ -147,12 +147,12 @@ void keyMovement(SDL_Keycode key, UserServer* userServer){
 		ObjectItem* objectItemCurrent = objectItemCollisionS;
 		while(objectItemCurrent != NULL){
 			if(
-				objectItemCurrent->object.type != ObjectTypeBomb ||
-				objectItemCurrent->object.owner != userServer->character ||
-				objectItemCurrent->object.bombOut
+				objectItemCurrent->object->type != ObjectTypeBomb ||
+				objectItemCurrent->object->owner != userServer->character ||
+				objectItemCurrent->object->bombOut
 			){
-				objectItemSFree(objectItemCollisionS);
-				characterItemSFree(characterItemCollisionS);
+				objectItemSFree(objectItemCollisionS, false);
+				characterItemSFree(characterItemCollisionS, false);
 				return;
 			}
 
@@ -166,8 +166,8 @@ void keyMovement(SDL_Keycode key, UserServer* userServer){
 		while(objectItemCurrent != NULL){
 			//bombs which to player can not move back
 			//(it can be that it moved out from it in the past)
-			if(collisionPoint(positionNew, objectItemCurrent->object.position)){
-				objectItemCurrent->object.bombOut = true;
+			if(!collisionPoint(positionNew, objectItemCurrent->object->position)){
+				objectItemCurrent->object->bombOut = true;
 			}
 
 			objectItemCurrent = objectItemCurrent->next;
@@ -176,8 +176,8 @@ void keyMovement(SDL_Keycode key, UserServer* userServer){
 	
 	userServer->character->position = positionNew;
 
-	objectItemSFree(objectItemCollisionS);
-	characterItemSFree(characterItemCollisionS);
+	objectItemSFree(objectItemCollisionS, false);
+	characterItemSFree(characterItemCollisionS, false);
 }
 
 //keyBomb calculates bomb position based on keyItem.key
@@ -189,32 +189,31 @@ void keyBomb(SDL_Keycode key, UserServer* userServer){
 	Position positionNew = userServer->character->position;
 
 	//position
-	if (positionNew.y % squaresize > squaresize / 2){
-		positionNew.y += squaresize;
-	}
-	if (positionNew.x % squaresize > squaresize / 2){
-		positionNew.x += squaresize;
-	}
 	positionNew.y -= positionNew.y % squaresize;
 	positionNew.x -= positionNew.x % squaresize;
+	if (userServer->character->position.y % squaresize > squaresize / 2){
+		positionNew.y += squaresize;
+	}
+	if (userServer->character->position.x % squaresize > squaresize / 2){
+		positionNew.x += squaresize;
+	}
 
-
-	ObjectItem* objectItemCollisionS = collisionObjectS(worldServer->objectItemS, userServer->character->position, positionNew);
-	CharacterItem* characterItemCollisionS = collisionCharacterS(worldServer->characterItemS, userServer->character->position, positionNew);
+	ObjectItem* objectItemCollisionS = collisionObjectS(worldServer->objectItemS, positionNew, positionNew);
+	CharacterItem* characterItemCollisionS = collisionCharacterS(worldServer->characterItemS, positionNew, positionNew);
 
 	if (characterItemCollisionS != NULL){
 		if(
 			characterItemCollisionS->next != NULL ||
-			&(characterItemCollisionS->character) != userServer->character
+			characterItemCollisionS->character != userServer->character
 		){
-			objectItemSFree(objectItemCollisionS);
-			characterItemSFree(characterItemCollisionS);
+			objectItemSFree(objectItemCollisionS, false);
+			characterItemSFree(characterItemCollisionS, false);
 			return;
 		}
 	}
 	if (objectItemCollisionS != NULL){
-		objectItemSFree(objectItemCollisionS);
-		characterItemSFree(characterItemCollisionS);
+		objectItemSFree(objectItemCollisionS, false);
+		characterItemSFree(characterItemCollisionS, false);
 		return;
 	}
 
@@ -229,8 +228,8 @@ void keyBomb(SDL_Keycode key, UserServer* userServer){
 	};
 	objectItemSInsert(&(worldServer->objectItemS), &object);
 
-	objectItemSFree(objectItemCollisionS);
-	characterItemSFree(characterItemCollisionS);
+	objectItemSFree(objectItemCollisionS, false);
+	characterItemSFree(characterItemCollisionS, false);
 }
 
 //ServerReceive gets updates from users
@@ -282,8 +281,8 @@ void ServerStop(void){
 
 	//free worldServer
 	free(worldServer->exit);
-	characterItemSFree(worldServer->characterItemS);
-	objectItemSFree(worldServer->objectItemS);
+	characterItemSFree(worldServer->characterItemS, true);
+	objectItemSFree(worldServer->objectItemS, true);
 	free(worldServer);
 
 	//free userItemS
@@ -339,7 +338,7 @@ void ServerConnect(UserServer* userServerUnsafe){
 	CharacterItem* characterItem = characterItemSInsert(&(worldServer->characterItemS), &character);
 
 	//character associate
-	userServer->character = &(characterItem->character);
+	userServer->character = characterItem->character;
 
 	//reply
 	free(userServerUnsafe->auth); //in best case it's free(NULL)
