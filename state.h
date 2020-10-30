@@ -33,7 +33,7 @@ typedef struct{
 } Character; //seeable by others
 
 typedef struct CharacterItem{
-	Character character;
+	Character* character;
 	struct CharacterItem* next;
 	struct CharacterItem* prev;
 } CharacterItem; //Characters may be deleted frequently
@@ -55,7 +55,7 @@ typedef struct{
 } Object;
 
 typedef struct ObjectItem{
-	Object object;
+	Object* object;
 	struct ObjectItem* next;
 	struct ObjectItem* prev;
 } ObjectItem; //Objects may be deleted frequently
@@ -115,10 +115,10 @@ void keyItemSRemove(KeyItem** keyItemS, KeyItem* keyItem);
 void keyItemSFree(KeyItem* keyItemS);
 ObjectItem* objectItemSInsert(ObjectItem** objectItemS, Object* object);
 void objectItemSInsertItem(ObjectItem** objectItemS, ObjectItem* objectItem);
-void objectItemSFree(ObjectItem* objectItemS);
+void objectItemSFree(ObjectItem* objectItemS, bool objectFree);
 CharacterItem* characterItemSInsert(CharacterItem** characterItemS, Character* character);
 void characterItemSInsertItem(CharacterItem** characterItemS, CharacterItem* characterItem);
-void characterItemSFree(CharacterItem* characterItemS);
+void characterItemSFree(CharacterItem* characterItemS, bool characterFree);
 UserServerItem* userServerItemSInsert(UserServerItem** userServerItemS, UserServer* userServer);
 void userServerItemSFree(UserServerItem* userServerItemS);
 

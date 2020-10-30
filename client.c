@@ -142,7 +142,21 @@ void ClientDraw(WorldClient* worldClient){
 
 	//object
 	for(int i=0; i<worldClient->objectSLength; i++){
-		if (SDL_SetRenderDrawColor(SDLRenderer, 255, 0, 0, 255) < 0) {
+		int r,g,b;
+		if(worldClient->objectS[i].type == ObjectTypeBomb){
+			r = 0;
+			g = 0;
+			b = 0;
+		} else if(worldClient->objectS[i].type == ObjectTypeWall){
+			r = 255;
+			g = 0;
+			b = 0;
+		} else {
+			r = 255;
+			g = 165;
+			b = 0;
+		}
+		if (SDL_SetRenderDrawColor(SDLRenderer, r, g, b, 255) < 0) {
 			SDL_Log("ClientDraw: SDL_SetRenderDrawColor: %s", SDL_GetError());
 			exit(1);
 		}

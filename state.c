@@ -60,7 +60,9 @@ Ability AbilitySpeedExtra = {
 
 ObjectItem* objectItemSInsert(ObjectItem** objectItemS, Object* object){
 	ObjectItem* objectItem = (ObjectItem*) malloc(sizeof(ObjectItem));
-	*(objectItem->object) = *object;
+	Object* objectCopy = (Object*) malloc(sizeof(Object));
+	*objectCopy = *object;
+	objectItem->object = objectCopy;
 	
 	objectItemSInsertItem(objectItemS, objectItem);
 
@@ -83,20 +85,25 @@ void objectItemSInsertItem(ObjectItem** objectItemS, ObjectItem* objectItem){
 	}
 }
 
-void objectItemSFree(ObjectItem* objectItemS){
+void objectItemSFree(ObjectItem* objectItemS, bool objectFree){
 	ObjectItem* objectItemCurrent = objectItemS;
 	ObjectItem* objectItemPrev;
 	while(objectItemCurrent != NULL){
 		objectItemPrev = objectItemCurrent;
 		objectItemCurrent = objectItemCurrent->next;
 
+		if(objectFree){
+			free(objectItemPrev->object);
+		}
 		free(objectItemPrev);
 	}
 }
 
 CharacterItem* characterItemSInsert(CharacterItem** characterItemS, Character* character){
 	CharacterItem* characterItem = (CharacterItem*) malloc(sizeof(CharacterItem));
-	*(characterItem->character) = *character;
+	Character* characterCopy = (Character*) malloc(sizeof(Character));
+	*characterCopy = *character;
+	characterItem->character = characterCopy;
 	
 	characterItemSInsertItem(characterItemS, characterItem);
 
@@ -119,13 +126,16 @@ void characterItemSInsertItem(CharacterItem** characterItemS, CharacterItem* cha
 	}
 }
 
-void characterItemSFree(CharacterItem* characterItemS){
+void characterItemSFree(CharacterItem* characterItemS, bool characterFree){
 	CharacterItem* characterItemCurrent = characterItemS;
 	CharacterItem* characterItemPrev;
 	while(characterItemCurrent != NULL){
 		characterItemPrev = characterItemCurrent;
 		characterItemCurrent = characterItemCurrent->next;
 
+		if(characterFree){
+			free(characterItemPrev->character);
+		}
 		free(characterItemPrev);
 	}
 }
