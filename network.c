@@ -48,7 +48,7 @@ void networkSendClient(WorldServer* worldServer){
 	worldClient->objectS = (Object*) malloc(objectSLength * sizeof(Object));
 	objectItemCurrent = worldServer->objectItemS;
 	for(int i=0; i<objectSLength; i++){
-		worldClient->objectS[i] = objectItemCurrent->object;
+		worldClient->objectS[i] = *(objectItemCurrent->object);
 
 		objectItemCurrent = objectItemCurrent->next;
 	}
@@ -67,7 +67,7 @@ void networkSendClient(WorldServer* worldServer){
 	worldClient->characterS = (Character*) malloc(characterSLength * sizeof(Character));
 	characterItemCurrent = worldServer->characterItemS;
 	for(int i=0; i<characterSLength; i++){
-		worldClient->characterS[i] = characterItemCurrent->character;
+		worldClient->characterS[i] = *(characterItemCurrent->character);
 
 		characterItemCurrent = characterItemCurrent->next;
 	}
