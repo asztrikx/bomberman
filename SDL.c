@@ -14,10 +14,10 @@ void SDLInit(void){
 		exit(1);
 	}
 
-	if (TTF_Init() < 0) {
+	/*if (TTF_Init() < 0) {
 		SDL_Log("sdl init: %s", SDL_GetError());
 		exit(1);
-	}
+	}*/
 
 	//window
 	SDLWindow = SDL_CreateWindow("alt", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, windowWidth, windowHeight, 0);
