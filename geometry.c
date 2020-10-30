@@ -26,6 +26,11 @@ bool collisionLine(Position from, Position to, Position obstacle){
 		step = abs(to.x - from.x);
 	}
 
+	//stays in place
+	if(step == 0){
+		return collisionPoint(from, obstacle);
+	}
+
 	//step through each discrete value as there are scenarios where
 	//the collision would misbehave if we would only check the arrival position
 	//eg: too fast speed would make it able to cross walls
@@ -55,7 +60,10 @@ ObjectItem* collisionObjectS(ObjectItem* objectItemS, Position from, Position to
 	ObjectItem* objectItemCurrent = objectItemS;
 	while(objectItemCurrent != NULL){
 		if(collisionLine(from, to, objectItemCurrent->object->position)){
-			objectItemSInsertItem(&objectItemCollisionS, objectItemCurrent);
+			ObjectItem* objectItem = (ObjectItem*) malloc(sizeof(ObjectItem));
+			objectItem->object = objectItemCurrent->object;
+
+			objectItemSInsertItem(&objectItemCollisionS, objectItem);
 		}
 
 		objectItemCurrent = objectItemCurrent->next;
@@ -72,7 +80,10 @@ CharacterItem* collisionCharacterS(CharacterItem* characterItemS, Position from,
 	CharacterItem* characterItemCurrent = characterItemS;
 	while(characterItemCurrent != NULL){
 		if(collisionLine(from, to, characterItemCurrent->character->position)){
-			characterItemSInsertItem(&characterItemCollisionS, characterItemCurrent);
+			CharacterItem* characterItem = (CharacterItem*) malloc(sizeof(CharacterItem));
+			characterItem->character = characterItemCurrent->character;
+
+			characterItemSInsertItem(&characterItemCollisionS, characterItem);
 		}
 
 		characterItemCurrent = characterItemCurrent->next;
@@ -109,6 +120,8 @@ WorldServer* worldGenerate(int height, int width){
 					},
 					.type = ObjectTypeWall,
 					.velocity = (Position){0,0},
+					.bombOut = true,
+					.owner = NULL,
 				};
 				objectItemSInsert(&(worldServer->objectItemS), &object);
 			}
