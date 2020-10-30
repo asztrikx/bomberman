@@ -25,6 +25,7 @@ int main(void) {
 	ServerStop();
 	ClientStop();
 	
+	//TTF_Quit();
 	SDL_Quit();
 	return 0;
 }
