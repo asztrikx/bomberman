@@ -104,13 +104,14 @@ void networkSendServer(UserClient* userClient){
 	}
 
 	//create userServer
-	UserServer* userServer = &(UserServer){
+	UserServer userServerCopy = (UserServer){
 		.auth = (char*) malloc((26 + 1) * sizeof(char)),
 		.character = NULL,
 		.keyS = keyS,
 		.keySLength = keySLength,
 		.name = (char*) malloc((15 + 1) * sizeof(char)),
 	};
+	UserServer* userServer = &userServerCopy;
 	strcpy(userServer->auth, userClient->auth);
 	strcpy(userServer->name, userClient->name);
 
@@ -129,13 +130,14 @@ void networkSendServer(UserClient* userClient){
 //networkConnectServer client request to server to create connection
 void networkConnectServer(UserClient* userClient){
 	//copy
-	UserServer* userServer = &(UserServer){
+	UserServer userServerCopy = (UserServer){
 		.auth = NULL,
 		.character = NULL,
 		.keyS = NULL,
 		.keySLength = 0,
 		.name = (char*) malloc((15 + 1) * sizeof(char)),
 	};
+	UserServer* userServer = &userServerCopy;
 	strcpy(userServer->name, userClient->name);
 
 	//send
