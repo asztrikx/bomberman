@@ -8,9 +8,10 @@ extern Position velocity;
 extern int windowHeight;
 extern int windowWidth;
 
-bool collisionPositionS(Position position1, Position position2);
-bool collisionObjectS(ObjectItem* objectItems, Position position);
-bool collisionCharacterS(CharacterItem* characterItemS, Position position, Character* characterException);
+bool collisionPoint(Position position1, Position position2);
+bool collisionLine(Position from, Position to, Position obstacle);
+ObjectItem* collisionObjectS(ObjectItem* objectItemS, Position from, Position to);
+CharacterItem* collisionCharacterS(CharacterItem* characterItemS, Position from, Position to);
 WorldServer* worldGenerate(int height, int width);
 
 #endif

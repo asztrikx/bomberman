@@ -1,5 +1,6 @@
 #include "debugmalloc.h"
 #include "geometry.h"
+#include <math.h>
 #include "state.h"
 
 int squaresize = 50;
@@ -7,7 +8,7 @@ Position velocity = {10, 10};
 int windowHeight = 480;
 int windowWidth = 640;
 
-bool collisionPositionS(Position position1, Position position2){
+bool collisionPoint(Position position1, Position position2){
 	if(abs(position1.x - position2.x) >= squaresize){
 		return false;
 	}
@@ -17,33 +18,67 @@ bool collisionPositionS(Position position1, Position position2){
 	return true;
 }
 
-bool collisionObjectS(ObjectItem* objectItems, Position position){
-	ObjectItem* objectItem = objectItems;
-	while(objectItem != NULL){
-		if(collisionPositionS(objectItem->object.position, position)){
-			return true;
+bool collisionLine(Position from, Position to, Position obstacle){
+	//velocity is always has same abs value or one of them is zero so
+	//to - from will have the same property
+	int step = abs(to.y - from.y);
+	if (step == 0){
+		step = abs(to.x - from.x);
+	}
+
+	//step through each discrete value as there are scenarios where
+	//the collision would misbehave if we would only check the arrival position
+	//eg: too fast speed would make it able to cross walls
+	//eg: squaresize pixel wide diagonal is crossable this way
+	Position current = from;
+	for(int i=0; i<step; i++){
+		if(to.y - from.y != 0){
+			current.y += (to.y - from.y) / abs(to.y - from.y);
+		}
+		if(to.x - from.x != 0){
+			current.x += (to.x - from.x) / abs(to.x - from.x);
 		}
 
-		objectItem = objectItem->next;
+		if(collisionPoint(current, obstacle)){
+			return true;
+		}
 	}
-	
+
 	return false;
 }
 
-bool collisionCharacterS(CharacterItem* characterItemS, Position position, Character* characterException){
-	CharacterItem* characterItem = characterItemS;
-	while(characterItem != NULL){
-		if(
-			collisionPositionS(characterItem->character.position, position) &&
-			&(characterItem->character) != characterException
-		){
-			return true;
+//collisionObjectS
+//free must be called
+ObjectItem* collisionObjectS(ObjectItem* objectItemS, Position from, Position to){
+	ObjectItem* objectItemCollisionS = NULL;
+
+	ObjectItem* objectItemCurrent = objectItemS;
+	while(objectItemCurrent != NULL){
+		if(collisionLine(from, to, objectItemCurrent->object->position)){
+			objectItemSInsertItem(&objectItemCollisionS, objectItemCurrent);
 		}
 
-		characterItem = characterItem->next;
+		objectItemCurrent = objectItemCurrent->next;
 	}
 	
-	return false;
+	return objectItemCollisionS;
+}
+
+//collisionCharacterS
+//free must be called
+CharacterItem* collisionCharacterS(CharacterItem* characterItemS, Position from, Position to){
+	CharacterItem* characterItemCollisionS = NULL;
+
+	CharacterItem* characterItemCurrent = characterItemS;
+	while(characterItemCurrent != NULL){
+		if(collisionLine(from, to, characterItemCurrent->character->position)){
+			characterItemSInsertItem(&characterItemCollisionS, characterItemCurrent);
+		}
+
+		characterItemCurrent = characterItemCurrent->next;
+	}
+	
+	return characterItemCollisionS;
 }
 
 //worldGenerate generates default map
@@ -66,7 +101,7 @@ WorldServer* worldGenerate(int height, int width){
 				i == height - 1 || j == width - 1 ||
 				(i % 2 == 0 && j % 2 == 0)
 			){
-				objectItemSInsert(&(worldServer->objectItemS), &(Object){
+				Object object = (Object){
 					.created = -1,
 					.position = (Position){
 						.y = i * squaresize,
@@ -74,7 +109,8 @@ WorldServer* worldGenerate(int height, int width){
 					},
 					.type = ObjectTypeWall,
 					.velocity = (Position){0,0},
-				});
+				};
+				objectItemSInsert(&(worldServer->objectItemS), &object);
 			}
 		}
 	}
