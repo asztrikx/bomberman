@@ -189,7 +189,7 @@ void ClientDraw(WorldClient* worldClient){
 			exit(1);
 		}*/
 
-		TTF_Font* font = TTF_OpenFont("NotoSansMono-Regular.ttf", 24); //this opens a font style and sets a size
+		/*TTF_Font* font = TTF_OpenFont("NotoSansMono-Regular.ttf", 24); //this opens a font style and sets a size
 		if(!font) {
 			printf("TTF_OpenFont: %s\n", TTF_GetError());
 			exit(1);
@@ -211,7 +211,7 @@ void ClientDraw(WorldClient* worldClient){
 
 		//Don't forget to free your surface and texture
 		SDL_FreeSurface(surfaceMessage);
-		SDL_DestroyTexture(Message);
+		SDL_DestroyTexture(Message);*/
 	}
 
 	//render
@@ -245,17 +245,18 @@ void ClientStart(void){
 }
 
 void ClientStop(void){
+	if(!SDL_RemoveTimer(tickId)){
+		SDL_Log("ClientStop: SDL_RemoveTimer: %s", SDL_GetError());
+		exit(1);
+	}
+
+	//wait timers to finish
 	if (SDL_LockMutex(mutex) != 0){
 		SDL_Log("ClientStop: SDL_LockMutex: %s", SDL_GetError());
 		exit(1);
 	}
 
 	networkClientStop();
-
-	if(!SDL_RemoveTimer(tickId)){
-		SDL_Log("ClientStop: SDL_RemoveTimer: %s", SDL_GetError());
-		exit(1);
-	}
 
 	//abilitySFree(userClient->ablityS);
 	free(userClient->auth);
