@@ -60,8 +60,14 @@ Ability AbilitySpeedExtra = {
 
 ObjectItem* objectItemSInsert(ObjectItem** objectItemS, Object* object){
 	ObjectItem* objectItem = (ObjectItem*) malloc(sizeof(ObjectItem));
-	objectItem->object = *object;
+	*(objectItem->object) = *object;
 	
+	objectItemSInsertItem(objectItemS, objectItem);
+
+	return objectItem;
+}
+
+void objectItemSInsertItem(ObjectItem** objectItemS, ObjectItem* objectItem){
 	if(*objectItemS == NULL){ //first element
 		objectItem->next = NULL;
 		objectItem->prev = NULL;
@@ -75,8 +81,6 @@ ObjectItem* objectItemSInsert(ObjectItem** objectItemS, Object* object){
 
 		(*objectItemS) = objectItem;
 	}
-
-	return objectItem;
 }
 
 void objectItemSFree(ObjectItem* objectItemS){
@@ -92,8 +96,14 @@ void objectItemSFree(ObjectItem* objectItemS){
 
 CharacterItem* characterItemSInsert(CharacterItem** characterItemS, Character* character){
 	CharacterItem* characterItem = (CharacterItem*) malloc(sizeof(CharacterItem));
-	characterItem->character = *character;
+	*(characterItem->character) = *character;
 	
+	characterItemSInsertItem(characterItemS, characterItem);
+
+	return characterItem;
+}
+
+void characterItemSInsertItem(CharacterItem** characterItemS, CharacterItem* characterItem){
 	if(*characterItemS == NULL){ //first element
 		characterItem->next = NULL;
 		characterItem->prev = NULL;
@@ -107,8 +117,6 @@ CharacterItem* characterItemSInsert(CharacterItem** characterItemS, Character* c
 
 		(*characterItemS) = characterItem;
 	}
-
-	return characterItem;
 }
 
 void characterItemSFree(CharacterItem* characterItemS){

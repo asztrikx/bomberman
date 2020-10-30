@@ -9,26 +9,6 @@ typedef struct{
 	int y, x;
 } Position;
 
-//Object
-typedef enum{
-	ObjectTypeBomb,
-	ObjectTypeObstacle,
-	ObjectTypeWall,
-} ObjectType;
-
-typedef struct{
-	Position position;
-	ObjectType type;
-	long long created; //destroy event => maybe destroyOn
-	Position velocity;
-} Object;
-
-typedef struct ObjectItem{
-	Object object;
-	struct ObjectItem* next;
-	struct ObjectItem* prev;
-} ObjectItem; //Objects may be deleted frequently
-
 //Key list
 typedef struct KeyItem{
 	SDL_Keycode key;
@@ -57,6 +37,28 @@ typedef struct CharacterItem{
 	struct CharacterItem* next;
 	struct CharacterItem* prev;
 } CharacterItem; //Characters may be deleted frequently
+
+//Object
+typedef enum{
+	ObjectTypeBomb,
+	ObjectTypeObstacle,
+	ObjectTypeWall,
+} ObjectType;
+
+typedef struct{
+	Position position;
+	ObjectType type;
+	long long created; //destroy event => maybe destroyOn
+	Position velocity;
+	Character* owner; //NULL if server or disconnected player
+	bool bombOut; //only for ObjectTypeBomb signaling whether player has move out from bomb
+} Object;
+
+typedef struct ObjectItem{
+	Object object;
+	struct ObjectItem* next;
+	struct ObjectItem* prev;
+} ObjectItem; //Objects may be deleted frequently
 
 //World
 typedef struct{
@@ -112,8 +114,10 @@ KeyItem* keyItemSInsert(KeyItem** keyItemS, SDL_Keycode* key);
 void keyItemSRemove(KeyItem** keyItemS, KeyItem* keyItem);
 void keyItemSFree(KeyItem* keyItemS);
 ObjectItem* objectItemSInsert(ObjectItem** objectItemS, Object* object);
+void objectItemSInsertItem(ObjectItem** objectItemS, ObjectItem* objectItem);
 void objectItemSFree(ObjectItem* objectItemS);
 CharacterItem* characterItemSInsert(CharacterItem** characterItemS, Character* character);
+void characterItemSInsertItem(CharacterItem** characterItemS, CharacterItem* characterItem);
 void characterItemSFree(CharacterItem* characterItemS);
 UserServerItem* userServerItemSInsert(UserServerItem** userServerItemS, UserServer* userServer);
 void userServerItemSFree(UserServerItem* userServerItemS);
