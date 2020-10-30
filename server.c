@@ -126,14 +126,58 @@ void keyMovement(SDL_Keycode key, UserServer* userServer){
 		positionNew.x += userServer->character->velocity.x;
 	}
 
-	if(
-		collisionObjectS(worldServer->objectItemS, positionNew) ||
-		collisionCharacterS(worldServer->characterItemS, positionNew, userServer->character)
+	ObjectItem* objectItemCollisionS = collisionObjectS(worldServer->objectItemS, userServer->character->position, positionNew);
+	CharacterItem* characterItemCollisionS = collisionCharacterS(worldServer->characterItemS, userServer->character->position, positionNew);
+
+	if (
+		characterItemCollisionS != NULL &&
+		(
+			characterItemCollisionS->next != NULL ||
+			&(characterItemCollisionS->character) != userServer->character
+		)
 	){
+		objectItemSFree(objectItemCollisionS);
+		characterItemSFree(characterItemCollisionS);
 		return;
+	}
+	if(objectItemCollisionS != NULL){
+		//player can be inside bomb
+		//it can be inside two bomb
+		//eg: inside firstly placed one and just placed one into neighbourgh position
+		ObjectItem* objectItemCurrent = objectItemCollisionS;
+		while(objectItemCurrent != NULL){
+			if(
+				objectItemCurrent->object.type != ObjectTypeBomb ||
+				objectItemCurrent->object.owner != userServer->character ||
+				objectItemCurrent->object.bombOut
+			){
+				objectItemSFree(objectItemCollisionS);
+				characterItemSFree(characterItemCollisionS);
+				return;
+			}
+
+			objectItemCurrent = objectItemCurrent->next;
+		}
+	}
+
+	//moved from an area with its own bombs
+	if(objectItemCollisionS != NULL){
+		ObjectItem* objectItemCurrent = objectItemCollisionS;
+		while(objectItemCurrent != NULL){
+			//bombs which to player can not move back
+			//(it can be that it moved out from it in the past)
+			if(collisionPoint(positionNew, objectItemCurrent->object.position)){
+				objectItemCurrent->object.bombOut = true;
+			}
+
+			objectItemCurrent = objectItemCurrent->next;
+		}
 	}
 	
 	userServer->character->position = positionNew;
+
+	objectItemSFree(objectItemCollisionS);
+	characterItemSFree(characterItemCollisionS);
 }
 
 //keyBomb calculates bomb position based on keyItem.key
@@ -154,21 +198,39 @@ void keyBomb(SDL_Keycode key, UserServer* userServer){
 	positionNew.y -= positionNew.y % squaresize;
 	positionNew.x -= positionNew.x % squaresize;
 
-	//collision
-	if (
-		collisionObjectS(worldServer->objectItemS, positionNew) ||
-		collisionCharacterS(worldServer->characterItemS, positionNew, userServer->character)
-	){
+
+	ObjectItem* objectItemCollisionS = collisionObjectS(worldServer->objectItemS, userServer->character->position, positionNew);
+	CharacterItem* characterItemCollisionS = collisionCharacterS(worldServer->characterItemS, userServer->character->position, positionNew);
+
+	if (characterItemCollisionS != NULL){
+		if(
+			characterItemCollisionS->next != NULL ||
+			&(characterItemCollisionS->character) != userServer->character
+		){
+			objectItemSFree(objectItemCollisionS);
+			characterItemSFree(characterItemCollisionS);
+			return;
+		}
+	}
+	if (objectItemCollisionS != NULL){
+		objectItemSFree(objectItemCollisionS);
+		characterItemSFree(characterItemCollisionS);
 		return;
 	}
 
 	//bomb insert
-	objectItemSInsert(&(worldServer->objectItemS), &(Object){
+	Object object = (Object){
 		.created = tickCount,
 		.position = positionNew,
 		.type = ObjectTypeBomb,
 		.velocity = (Position){0, 0},
-	});
+		.bombOut = false,
+		.owner = userServer->character,
+	};
+	objectItemSInsert(&(worldServer->objectItemS), &object);
+
+	objectItemSFree(objectItemCollisionS);
+	characterItemSFree(characterItemCollisionS);
 }
 
 //ServerReceive gets updates from users
@@ -205,17 +267,18 @@ void ServerReceive(UserServer* userServerUnsafe){
 
 //ServerStop clears server module
 void ServerStop(void){
+	if(!SDL_RemoveTimer(tickId)){
+		SDL_Log("ServerStop: SDL_RemoveTimer: %s", SDL_GetError());
+		exit(1);
+	}
+
+	//wait timers to finish
 	if (SDL_LockMutex(mutex) != 0){
 		SDL_Log("ServerStop: SDL_LockMutex: %s", SDL_GetError());
 		exit(1);
 	}
 
 	networkServerStop();
-
-	if(!SDL_RemoveTimer(tickId)){
-		SDL_Log("ServerStop: SDL_RemoveTimer: %s", SDL_GetError());
-		exit(1);
-	}
 
 	//free worldServer
 	free(worldServer->exit);
@@ -240,13 +303,14 @@ void ServerConnect(UserServer* userServerUnsafe){
 	}
 
 	//userServer insert
-	UserServerItem* userServerItem = userServerItemSInsert(&userServerItemS, &(UserServer){
+	UserServer userServerCopy = (UserServer){
 		.auth = NULL,
 		.character = NULL,
 		.keyS = NULL,
 		.keySLength = 0,
 		.name = (char*) malloc((15 + 1) * sizeof(char)),
-	});
+	};
+	UserServerItem* userServerItem = userServerItemSInsert(&userServerItemS, &userServerCopy);
 	UserServer* userServer = &(userServerItem->userServer);
 	strncpy(userServer->name, userServerUnsafe->name, 15);
 	userServer->name[15] = '\0';
@@ -265,13 +329,14 @@ void ServerConnect(UserServer* userServerUnsafe){
 	}
 
 	//character insert
-	CharacterItem* characterItem = characterItemSInsert(&(worldServer->characterItemS), &(Character){
+	Character character = (Character){
 		.bomb = 1,
 		.name = userServer->name,
 		.position = (Position) {1 * squaresize, 1 * squaresize},
 		.type = CharacterTypeUser,
 		.velocity = velocity,
-	});
+	};
+	CharacterItem* characterItem = characterItemSInsert(&(worldServer->characterItemS), &character);
 
 	//character associate
 	userServer->character = &(characterItem->character);
