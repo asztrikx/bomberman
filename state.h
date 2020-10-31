@@ -27,7 +27,7 @@ typedef struct{
 	Position position;
 	CharacterType type;
 	Position velocity;
-	int bomb;
+	int bombCount; //number of placed bombs for easier check
 	//Object* bombS; //why?
 	char* name;
 } Character; //seeable by others
@@ -41,14 +41,17 @@ typedef struct CharacterItem{
 //Object
 typedef enum{
 	ObjectTypeBomb,
+	ObjectTypeBombFire,
 	ObjectTypeObstacle,
 	ObjectTypeWall,
+	ObjectTypeBox,
 } ObjectType;
 
 typedef struct{
 	Position position;
 	ObjectType type;
-	long long created; //destroy event => maybe destroyOn
+	long long created;
+	long long destroy; //-1 means never gets destroyed by server
 	Position velocity;
 	Character* owner; //NULL if server or disconnected player
 	bool bombOut; //only for ObjectTypeBomb signaling whether player has move out from bomb
@@ -65,6 +68,7 @@ typedef struct{
 	ObjectItem* objectItemS;
 	CharacterItem* characterItemS;
 	Position* exit;
+	int height, width;
 } WorldServer;
 
 typedef struct{
@@ -115,9 +119,13 @@ void keyItemSRemove(KeyItem** keyItemS, KeyItem* keyItem);
 void keyItemSFree(KeyItem* keyItemS);
 ObjectItem* objectItemSInsert(ObjectItem** objectItemS, Object* object);
 void objectItemSInsertItem(ObjectItem** objectItemS, ObjectItem* objectItem);
+ObjectItem* objectItemSFind(ObjectItem* objectItemS, Object* object);
+void objectItemSRemove(ObjectItem** objectItemS, ObjectItem* objectItem, bool objectFree);
 void objectItemSFree(ObjectItem* objectItemS, bool objectFree);
 CharacterItem* characterItemSInsert(CharacterItem** characterItemS, Character* character);
 void characterItemSInsertItem(CharacterItem** characterItemS, CharacterItem* characterItem);
+CharacterItem* characterItemSFind(CharacterItem* characterItemS, Character* character);
+void characterItemSRemove(CharacterItem** characterItemS, CharacterItem* characterItem, bool characterFree);
 void characterItemSFree(CharacterItem* characterItemS, bool characterFree);
 UserServerItem* userServerItemSInsert(UserServerItem** userServerItemS, UserServer* userServer);
 void userServerItemSFree(UserServerItem* userServerItemS);

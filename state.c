@@ -85,6 +85,41 @@ void objectItemSInsertItem(ObjectItem** objectItemS, ObjectItem* objectItem){
 	}
 }
 
+ObjectItem* objectItemSFind(ObjectItem* objectItemS, Object* object){
+	ObjectItem* objectItemCurrent = objectItemS;
+	while(objectItemCurrent != NULL){
+		if(objectItemCurrent->object == object){
+			return objectItemCurrent;
+		}
+
+		objectItemCurrent = objectItemCurrent->next;
+	}
+
+	return NULL;
+}
+
+void objectItemSRemove(ObjectItem** objectItemS, ObjectItem* objectItem, bool objectFree){
+	//relink
+	if(objectItem->prev == NULL && objectItem->next == NULL){
+		*objectItemS = NULL;
+	} else if(objectItem->prev == NULL){
+		objectItem->next->prev = NULL;
+
+		*objectItemS = objectItem->next;
+	} else if(objectItem->next == NULL){
+		objectItem->prev->next = NULL;
+	} else {
+		objectItem->prev->next = objectItem->next;
+		objectItem->next->prev = objectItem->prev;
+	}
+
+	//free
+	if(objectFree){
+		free(objectItem->object);
+	}
+	free(objectItem);
+}
+
 void objectItemSFree(ObjectItem* objectItemS, bool objectFree){
 	ObjectItem* objectItemCurrent = objectItemS;
 	ObjectItem* objectItemPrev;
@@ -124,6 +159,41 @@ void characterItemSInsertItem(CharacterItem** characterItemS, CharacterItem* cha
 
 		(*characterItemS) = characterItem;
 	}
+}
+
+CharacterItem* characterItemSFind(CharacterItem* characterItemS, Character* character){
+	CharacterItem* characterItemCurrent = characterItemS;
+	while(characterItemCurrent != NULL){
+		if(characterItemCurrent->character == character){
+			return characterItemCurrent;
+		}
+
+		characterItemCurrent = characterItemCurrent->next;
+	}
+
+	return NULL;
+}
+
+void characterItemSRemove(CharacterItem** characterItemS, CharacterItem* characterItem, bool characterFree){
+	//relink
+	if(characterItem->prev == NULL && characterItem->next == NULL){
+		*characterItemS = NULL;
+	} else if(characterItem->prev == NULL){
+		characterItem->next->prev = NULL;
+
+		*characterItemS = characterItem->next;
+	} else if(characterItem->next == NULL){
+		characterItem->prev->next = NULL;
+	} else {
+		characterItem->prev->next = characterItem->next;
+		characterItem->next->prev = characterItem->prev;
+	}
+
+	//free
+	if(characterFree){
+		free(characterItem->character);
+	}
+	free(characterItem);
 }
 
 void characterItemSFree(CharacterItem* characterItemS, bool characterFree){
