@@ -1,6 +1,7 @@
 #include "debugmalloc.h"
 #include "geometry.h"
 #include <math.h>
+#include <stdint.h>
 #include "state.h"
 
 int squaresize = 50;
@@ -96,7 +97,7 @@ CharacterItem* collisionCharacterS(CharacterItem* characterItemS, Position from,
 //free should be called
 WorldServer* worldGenerate(int height, int width){
 	if(height % 2 != 1 || width % 2 != 1){
-		SDL_Log("World size is malformed");
+		SDL_Log("worldGenerate: World size is malformed");
 		exit(1);
 	}
 
@@ -104,6 +105,8 @@ WorldServer* worldGenerate(int height, int width){
 	worldServer->objectItemS = NULL;
 	worldServer->characterItemS = NULL;
 	worldServer->exit = NULL;
+	worldServer->height = height;
+	worldServer->width = width;
 	
 	for(int i=0; i<height; i++){
 		for(int j=0; j<width; j++){
@@ -112,8 +115,10 @@ WorldServer* worldGenerate(int height, int width){
 				i == height - 1 || j == width - 1 ||
 				(i % 2 == 0 && j % 2 == 0)
 			){
+				//[R] check collision
 				Object object = (Object){
 					.created = -1,
+					.destroy = -1,
 					.position = (Position){
 						.y = i * squaresize,
 						.x = j * squaresize,
@@ -126,6 +131,42 @@ WorldServer* worldGenerate(int height, int width){
 				objectItemSInsert(&(worldServer->objectItemS), &object);
 			}
 		}
+	}
+	
+	//box generate
+	if(
+		RAND_MAX != INT32_MAX && (
+			RAND_MAX + 1 < height ||
+			RAND_MAX + 1 < width
+		)
+	){
+		SDL_Log("worldGenerate: map is too big");
+		exit(1);
+	}
+	for(int i=0; i<(width + 1) * (height + 1) * 0.2; i++){
+		int y = 0, x = 0;
+		while(
+			y == 0 || x == 0 ||
+			y == height - 1 || x == width - 1 ||
+			(y % 2 == 0 && x % 2 == 0)
+		){
+			y = rand() % height;
+			x = rand() % width;
+		}
+
+		Object object = (Object){
+			.created = -1,
+			.destroy = -1,
+			.position = (Position){
+				.y = y * squaresize,
+				.x = x * squaresize,
+			},
+			.type = ObjectTypeBox,
+			.velocity = (Position){0,0},
+			.bombOut = true,
+			.owner = NULL,
+		};
+		objectItemSInsert(&(worldServer->objectItemS), &object);
 	}
 
 	return worldServer;
