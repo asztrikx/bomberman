@@ -143,18 +143,34 @@ void ClientDraw(WorldClient* worldClient){
 	//object
 	for(int i=0; i<worldClient->objectSLength; i++){
 		int r,g,b;
-		if(worldClient->objectS[i].type == ObjectTypeBomb){
-			r = 0;
-			g = 0;
-			b = 0;
-		} else if(worldClient->objectS[i].type == ObjectTypeWall){
-			r = 255;
-			g = 0;
-			b = 0;
-		} else {
-			r = 255;
-			g = 165;
-			b = 0;
+
+		switch (worldClient->objectS[i].type){
+			case ObjectTypeBomb:
+				r = 0;
+				g = 0;
+				b = 0;
+				break;
+			case ObjectTypeWall:
+				r = 255;
+				g = 0;
+				b = 0;
+				break;
+			case ObjectTypeBombFire:
+				r = 255;
+				g = 165;
+				b = 0;
+				break;
+			case ObjectTypeBox:
+				r = 165;
+				g = 165;
+				b = 42;
+				break;
+			
+			default:
+				r = 155;
+				g = 155;
+				b = 155;
+				break;
 		}
 		if (SDL_SetRenderDrawColor(SDLRenderer, r, g, b, 255) < 0) {
 			SDL_Log("ClientDraw: SDL_SetRenderDrawColor: %s", SDL_GetError());
