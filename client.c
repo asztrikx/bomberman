@@ -101,9 +101,21 @@ void ClientDraw(WorldClient* worldClient){
 			break;
 		}
 	}
+
+	//died
 	if(characterMe == NULL){
-		SDL_Log("ClientDraw: worldClient is missing player Me");
-		exit(1);
+		if(SDL_SetRenderDrawColor(SDLRenderer, 255, 0, 0, 0) < 0){
+			SDL_Log("ClientDraw: SDL_SetRenderDrawColor: %s", SDL_GetError());
+			exit(1);
+		}
+		if(SDL_RenderClear(SDLRenderer) < 0){
+			SDL_Log("ClientDraw: SDL_RenderClear: %s", SDL_GetError());
+			exit(1);
+		}
+
+		//render
+		SDL_RenderPresent(SDLRenderer);
+		return;
 	}
 
 	//offset
@@ -274,6 +286,7 @@ void ClientStart(void){
 	strcpy(userClient->name, "asd"); //load abstraction
 }
 
+//ClientStop
 void ClientStop(void){
 	if(!SDL_RemoveTimer(tickId)){
 		SDL_Log("ClientStop: SDL_RemoveTimer: %s", SDL_GetError());

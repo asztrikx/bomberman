@@ -73,7 +73,9 @@ void networkSendClient(WorldServer* worldServer){
 	}
 
 	//send
-	ClientReceive(worldClient); //network abstraction
+	if(!clientStop){ //network abstraction
+		ClientReceive(worldClient);
+	}
 
 	//free
 	free(worldClient->exit);

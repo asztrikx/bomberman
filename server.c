@@ -117,8 +117,6 @@ void fireDestroy(Object* object){
 	}
 	objectItemSFree(objectItemCollisionS, false);
 
-	return;
-
 	//character collision
 	CharacterItem* characterItemCollisionS = collisionCharacterS(worldServer->characterItemS, object->position, object->position);
 
