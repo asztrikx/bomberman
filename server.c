@@ -14,8 +14,145 @@ static const unsigned int tickRate = 60u;
 static const long long tickSecond = tickRate; //tick count in one second
 static int tickId;
 
-void keyMovement(SDL_Keycode key, UserServer* userServer);
-void keyBomb(SDL_Keycode key, UserServer* userServer);
+//keyMovement calculates user position based on keyItem.key
+void keyMovement(SDL_Keycode key, UserServer* userServer){
+	if(
+		key != SDLK_w &&
+		key != SDLK_a &&
+		key != SDLK_s &&
+		key != SDLK_d
+	){
+		return;
+	}
+
+	Position positionNew = userServer->character->position;
+	if(key == SDLK_w){
+		positionNew.y -= userServer->character->velocity.y;
+	} else if(key == SDLK_a){
+		positionNew.x -= userServer->character->velocity.x;
+	} else if(key == SDLK_s){
+		positionNew.y += userServer->character->velocity.y;
+	} else if(key == SDLK_d){
+		positionNew.x += userServer->character->velocity.x;
+	}
+
+	ObjectItem* objectItemCollisionS = collisionObjectS(worldServer->objectItemS, userServer->character->position, positionNew);
+	CharacterItem* characterItemCollisionS = collisionCharacterS(worldServer->characterItemS, userServer->character->position, positionNew);
+
+	//[R] collision should not drop position new, just cut it &positionNew to functions
+
+	if (
+		characterItemCollisionS != NULL &&
+		(
+			characterItemCollisionS->next != NULL ||
+			characterItemCollisionS->character != userServer->character
+		)
+	){
+		objectItemSFree(objectItemCollisionS, false);
+		characterItemSFree(characterItemCollisionS, false);
+		return;
+	}
+	if(objectItemCollisionS != NULL){
+		ObjectItem* objectItemCurrent = objectItemCollisionS;
+		while(objectItemCurrent != NULL){
+			//player can be inside fire (it will die in this exact tick)
+			if(objectItemCurrent->object->type == ObjectTypeBombFire){
+				objectItemCurrent = objectItemCurrent->next;
+				continue;
+			}
+
+			//player can be inside bomb
+			//it can be inside two bomb
+			//eg: inside firstly placed one and just placed one into neighbourgh position
+			if(
+				objectItemCurrent->object->type == ObjectTypeBomb &&
+				objectItemCurrent->object->owner == userServer->character &&
+				!objectItemCurrent->object->bombOut
+			){
+				objectItemCurrent = objectItemCurrent->next;
+				continue;
+			}
+
+			objectItemSFree(objectItemCollisionS, false);
+			characterItemSFree(characterItemCollisionS, false);
+			return;
+		}
+	}
+
+	//moved from an area with its own bombs
+	if(objectItemCollisionS != NULL){
+		ObjectItem* objectItemCurrent = objectItemCollisionS;
+		while(objectItemCurrent != NULL){
+			//bombs which to player can not move back
+			//(it can be that it moved out from it in the past)
+			if(!collisionPoint(positionNew, objectItemCurrent->object->position)){
+				objectItemCurrent->object->bombOut = true;
+			}
+
+			objectItemCurrent = objectItemCurrent->next;
+		}
+	}
+	
+	userServer->character->position = positionNew;
+
+	objectItemSFree(objectItemCollisionS, false);
+	characterItemSFree(characterItemCollisionS, false);
+}
+
+//keyBomb calculates bomb position based on keyItem.key
+void keyBomb(SDL_Keycode key, UserServer* userServer){
+	if(key != SDLK_SPACE){
+		return;
+	}
+
+	//[R]bomb available
+
+	Position positionNew = userServer->character->position;
+
+	//position
+	positionNew.y -= positionNew.y % squaresize;
+	positionNew.x -= positionNew.x % squaresize;
+	if (userServer->character->position.y % squaresize > squaresize / 2){
+		positionNew.y += squaresize;
+	}
+	if (userServer->character->position.x % squaresize > squaresize / 2){
+		positionNew.x += squaresize;
+	}
+
+	ObjectItem* objectItemCollisionS = collisionObjectS(worldServer->objectItemS, positionNew, positionNew);
+	CharacterItem* characterItemCollisionS = collisionCharacterS(worldServer->characterItemS, positionNew, positionNew);
+
+	if (characterItemCollisionS != NULL){
+		if(
+			characterItemCollisionS->next != NULL ||
+			characterItemCollisionS->character != userServer->character
+		){
+			objectItemSFree(objectItemCollisionS, false);
+			characterItemSFree(characterItemCollisionS, false);
+			return;
+		}
+	}
+	if (objectItemCollisionS != NULL){
+		objectItemSFree(objectItemCollisionS, false);
+		characterItemSFree(characterItemCollisionS, false);
+		return;
+	}
+
+	//bomb insert
+	Object object = (Object){
+		.created = tickCount,
+		.destroy = tickCount + 2 * tickSecond,
+		.position = positionNew,
+		.type = ObjectTypeBomb,
+		.velocity = (Position){0, 0},
+		.bombOut = false,
+		.owner = userServer->character,
+	};
+	objectItemSInsert(&(worldServer->objectItemS), &object);
+
+	objectItemSFree(objectItemCollisionS, false);
+	characterItemSFree(characterItemCollisionS, false);
+}
 
 UserServer* ServerAuthCheck(char* auth){
 	UserServerItem* userServerItemCurrent = userServerItemS;
@@ -219,146 +356,6 @@ void ServerStart(void){
 		SDL_Log("SDL_AddTimer: %s", SDL_GetError());
 		exit(1);
 	}
-}
-
-//keyMovement calculates user position based on keyItem.key
-void keyMovement(SDL_Keycode key, UserServer* userServer){
-	if(
-		key != SDLK_w &&
-		key != SDLK_a &&
-		key != SDLK_s &&
-		key != SDLK_d
-	){
-		return;
-	}
-
-	Position positionNew = userServer->character->position;
-	if(key == SDLK_w){
-		positionNew.y -= userServer->character->velocity.y;
-	} else if(key == SDLK_a){
-		positionNew.x -= userServer->character->velocity.x;
-	} else if(key == SDLK_s){
-		positionNew.y += userServer->character->velocity.y;
-	} else if(key == SDLK_d){
-		positionNew.x += userServer->character->velocity.x;
-	}
-
-	ObjectItem* objectItemCollisionS = collisionObjectS(worldServer->objectItemS, userServer->character->position, positionNew);
-	CharacterItem* characterItemCollisionS = collisionCharacterS(worldServer->characterItemS, userServer->character->position, positionNew);
-
-	//[R] collision should not drop position new, just cut it &positionNew to functions
-
-	if (
-		characterItemCollisionS != NULL &&
-		(
-			characterItemCollisionS->next != NULL ||
-			characterItemCollisionS->character != userServer->character
-		)
-	){
-		objectItemSFree(objectItemCollisionS, false);
-		characterItemSFree(characterItemCollisionS, false);
-		return;
-	}
-	if(objectItemCollisionS != NULL){
-		ObjectItem* objectItemCurrent = objectItemCollisionS;
-		while(objectItemCurrent != NULL){
-			//player can be inside fire (it will die in this exact tick)
-			if(objectItemCurrent->object->type == ObjectTypeBombFire){
-				objectItemCurrent = objectItemCurrent->next;
-				continue;
-			}
-
-			//player can be inside bomb
-			//it can be inside two bomb
-			//eg: inside firstly placed one and just placed one into neighbourgh position
-			if(
-				objectItemCurrent->object->type == ObjectTypeBomb &&
-				objectItemCurrent->object->owner == userServer->character &&
-				!objectItemCurrent->object->bombOut
-			){
-				objectItemCurrent = objectItemCurrent->next;
-				continue;
-			}
-
-			objectItemSFree(objectItemCollisionS, false);
-			characterItemSFree(characterItemCollisionS, false);
-			return;
-		}
-	}
-
-	//moved from an area with its own bombs
-	if(objectItemCollisionS != NULL){
-		ObjectItem* objectItemCurrent = objectItemCollisionS;
-		while(objectItemCurrent != NULL){
-			//bombs which to player can not move back
-			//(it can be that it moved out from it in the past)
-			if(!collisionPoint(positionNew, objectItemCurrent->object->position)){
-				objectItemCurrent->object->bombOut = true;
-			}
-
-			objectItemCurrent = objectItemCurrent->next;
-		}
-	}
-	
-	userServer->character->position = positionNew;
-
-	objectItemSFree(objectItemCollisionS, false);
-	characterItemSFree(characterItemCollisionS, false);
-}
-
-//keyBomb calculates bomb position based on keyItem.key
-void keyBomb(SDL_Keycode key, UserServer* userServer){
-	if(key != SDLK_SPACE){
-		return;
-	}
-
-	//[R]bomb available
-
-	Position positionNew = userServer->character->position;
-
-	//position
-	positionNew.y -= positionNew.y % squaresize;
-	positionNew.x -= positionNew.x % squaresize;
-	if (userServer->character->position.y % squaresize > squaresize / 2){
-		positionNew.y += squaresize;
-	}
-	if (userServer->character->position.x % squaresize > squaresize / 2){
-		positionNew.x += squaresize;
-	}
-
-	ObjectItem* objectItemCollisionS = collisionObjectS(worldServer->objectItemS, positionNew, positionNew);
-	CharacterItem* characterItemCollisionS = collisionCharacterS(worldServer->characterItemS, positionNew, positionNew);
-
-	if (characterItemCollisionS != NULL){
-		if(
-			characterItemCollisionS->next != NULL ||
-			characterItemCollisionS->character != userServer->character
-		){
-			objectItemSFree(objectItemCollisionS, false);
-			characterItemSFree(characterItemCollisionS, false);
-			return;
-		}
-	}
-	if (objectItemCollisionS != NULL){
-		objectItemSFree(objectItemCollisionS, false);
-		characterItemSFree(characterItemCollisionS, false);
-		return;
-	}
-
-	//bomb insert
-	Object object = (Object){
-		.created = tickCount,
-		.destroy = tickCount + 2 * tickSecond,
-		.position = positionNew,
-		.type = ObjectTypeBomb,
-		.velocity = (Position){0, 0},
-		.bombOut = false,
-		.owner = userServer->character,
-	};
-	objectItemSInsert(&(worldServer->objectItemS), &object);
-
-	objectItemSFree(objectItemCollisionS, false);
-	characterItemSFree(characterItemCollisionS, false);
 }
 
 //ServerReceive gets updates from users
