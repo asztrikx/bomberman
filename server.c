@@ -10,7 +10,8 @@ static SDL_mutex* mutex;
 static UserServerItem* userServerItemS;
 static WorldServer* worldServer;
 static long long tickCount = 0;
-static unsigned int tickRate = 60u;
+static const unsigned int tickRate = 60u;
+static const long long tickSecond = tickRate; //tick count in one second
 static int tickId;
 
 UserServer* ServerAuthCheck(char* auth){
@@ -51,6 +52,86 @@ char* ServerAuthCreate(){
 	return auth;
 }
 
+void bombExplode(Object* object){
+	if(object->type != ObjectTypeBomb){
+		return;
+	}
+
+	//fire add
+	int radius = 1;
+
+	//fire insert
+	//[R] collision with walls
+	int directionX[] = {1, -1, 0, 0};
+	int directionY[] = {0, 0, 1, -1};
+	for(int i=0; i<=radius; i++){
+		for(int j=0; j<4; j++){
+			Object objectFire = (Object){
+				.bombOut = true,
+				.created = tickCount,
+				.destroy = tickCount + 0.25 * tickSecond,
+				.owner = object->owner,
+				.position = (Position){
+					.y = object->position.y + i * directionY[j] * squaresize,
+					.x = object->position.x + i * directionX[j] * squaresize,
+				},
+				.type = ObjectTypeBombFire,
+				.velocity = (Position) {
+					.y = 0,
+					.x = 0,
+				},
+			};
+			objectItemSInsert(&(worldServer->objectItemS), &objectFire);
+
+			//otherwise there would be 4 fire in the same spot
+			if(i == 0){
+				break;
+			}
+		}
+	}
+
+	//bomb remove
+	if(object->owner != NULL){
+		object->owner->bombCount--;
+	}
+}
+
+void fireDestroy(Object* object){
+	if(object->type != ObjectTypeBombFire){
+		return;
+	}
+
+	//object collision
+	ObjectItem* objectItemCollisionS = collisionObjectS(worldServer->objectItemS, object->position, object->position);
+
+	ObjectItem* objectItemCollisionCurrent = objectItemCollisionS;
+	while(objectItemCollisionCurrent != NULL){
+		if(objectItemCollisionCurrent->object->type == ObjectTypeBox){
+			ObjectItem* objectItem = objectItemSFind(worldServer->objectItemS, objectItemCollisionCurrent->object);
+			objectItemSRemove(&(worldServer->objectItemS), objectItem, true);
+		} else if(objectItemCollisionCurrent->object->type == ObjectTypeBomb){
+			//bombExplode(objectItemCurrent->object);
+		}
+
+		objectItemCollisionCurrent = objectItemCollisionCurrent->next;
+	}
+	objectItemSFree(objectItemCollisionS, false);
+
+	return;
+
+	//character collision
+	CharacterItem* characterItemCollisionS = collisionCharacterS(worldServer->characterItemS, object->position, object->position);
+
+	CharacterItem* characterItemCollisionCurrent = characterItemCollisionS;
+	while(characterItemCollisionCurrent != NULL){
+		CharacterItem* characterItem = characterItemSFind(worldServer->characterItemS, characterItemCollisionCurrent->character);
+		characterItemSRemove(&(worldServer->characterItemS), characterItem, true);
+
+		characterItemCollisionCurrent = characterItemCollisionCurrent->next;
+	}
+	characterItemSFree(characterItemCollisionS, false);
+}
+
 //ServerTick calculates new frame, notifies users
 Uint32 ServerTick(Uint32 interval, void *param){
 	if(SDL_LockMutex(mutex) != 0){
@@ -58,9 +139,28 @@ Uint32 ServerTick(Uint32 interval, void *param){
 		exit(1);
 	}
 
-	//[R]bomb explosion
-	//[R]player death
-	//[R]crate delete
+	//world calculate
+	ObjectItem* objectItemCurrent = worldServer->objectItemS;
+	while(objectItemCurrent != NULL){
+		Object* object = objectItemCurrent->object;
+
+		//destroy by server
+		if(tickCount == object->destroy){
+			bombExplode(object);
+
+			objectItemCurrent = objectItemCurrent->next;
+
+			objectItemSRemove(&(worldServer->objectItemS), objectItemCurrent->prev, true);
+			continue;
+		}
+
+		//destroy by user
+		fireDestroy(object);
+
+		//[R]state change
+
+		objectItemCurrent = objectItemCurrent->next;
+	}
 
 	//user notify
 	UserServerItem* userServerItemCurrent = userServerItemS;
@@ -78,13 +178,14 @@ Uint32 ServerTick(Uint32 interval, void *param){
 		exit(1);
 	}
 
+	tickCount++;
 	return interval;
 }
 
 //ServerStart generates world, start accepting connections, starts ticking
 void ServerStart(void){
 	//world generate
-	worldServer = worldGenerate(11, 11); //not critical section
+	worldServer = worldGenerate(17, 57); //not critical section
 
 	//mutex init
 	mutex = SDL_CreateMutex();
@@ -128,6 +229,8 @@ void keyMovement(SDL_Keycode key, UserServer* userServer){
 
 	ObjectItem* objectItemCollisionS = collisionObjectS(worldServer->objectItemS, userServer->character->position, positionNew);
 	CharacterItem* characterItemCollisionS = collisionCharacterS(worldServer->characterItemS, userServer->character->position, positionNew);
+
+	//[R] collision should not drop position new, just cut it &positionNew to functions
 
 	if (
 		characterItemCollisionS != NULL &&
@@ -186,6 +289,8 @@ void keyBomb(SDL_Keycode key, UserServer* userServer){
 		return;
 	}
 
+	//[R]bomb available
+
 	Position positionNew = userServer->character->position;
 
 	//position
@@ -220,6 +325,7 @@ void keyBomb(SDL_Keycode key, UserServer* userServer){
 	//bomb insert
 	Object object = (Object){
 		.created = tickCount,
+		.destroy = tickCount + 2 * tickSecond,
 		.position = positionNew,
 		.type = ObjectTypeBomb,
 		.velocity = (Position){0, 0},
@@ -327,11 +433,41 @@ void ServerConnect(UserServer* userServerUnsafe){
 		free(auth);
 	}
 
+	//position random
+	Position positionCompressed = (Position){
+		.y = 0,
+		.x = 0,
+	};
+	Position position;
+	while(
+		positionCompressed.y == 0 ||
+		positionCompressed.x == 0 ||
+		positionCompressed.y == worldServer->height - 1 ||
+		positionCompressed.x == worldServer->width - 1 ||
+		(
+			positionCompressed.y % 2 == 0 &&
+			positionCompressed.x % 2 == 0
+		) ||
+		collisionObjectS(worldServer->objectItemS, position, position) != NULL ||
+		collisionCharacterS(worldServer->characterItemS, position, position) != NULL
+	){
+		positionCompressed.y = rand() % worldServer->height;
+		positionCompressed.x = rand() % worldServer->width;
+
+		position.y = positionCompressed.y * squaresize;
+		position.x = positionCompressed.x * squaresize;
+	}
+
+	//[R]clear area
+
 	//character insert
 	Character character = (Character){
-		.bomb = 1,
+		.bombCount = 1,
 		.name = userServer->name,
-		.position = (Position) {1 * squaresize, 1 * squaresize},
+		.position = (Position) {
+			position.y,
+			position.x
+		},
 		.type = CharacterTypeUser,
 		.velocity = velocity,
 	};
