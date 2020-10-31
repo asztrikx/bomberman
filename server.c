@@ -14,6 +14,9 @@ static const unsigned int tickRate = 60u;
 static const long long tickSecond = tickRate; //tick count in one second
 static int tickId;
 
+void keyMovement(SDL_Keycode key, UserServer* userServer);
+void keyBomb(SDL_Keycode key, UserServer* userServer);
+
 UserServer* ServerAuthCheck(char* auth){
 	UserServerItem* userServerItemCurrent = userServerItemS;
 	while(userServerItemCurrent != NULL){
@@ -137,34 +140,49 @@ Uint32 ServerTick(Uint32 interval, void *param){
 		exit(1);
 	}
 
-	//world calculate
+	//destroy by server
+	//this should be calculated first as these objects should not exists in this tick
 	ObjectItem* objectItemCurrent = worldServer->objectItemS;
 	while(objectItemCurrent != NULL){
-		Object* object = objectItemCurrent->object;
-
-		//destroy by server
-		if(tickCount == object->destroy){
-			bombExplode(object);
-
+		if(tickCount != objectItemCurrent->object->destroy){
 			objectItemCurrent = objectItemCurrent->next;
-
-			objectItemSRemove(&(worldServer->objectItemS), objectItemCurrent->prev, true);
 			continue;
 		}
 
-		//destroy by user
-		fireDestroy(object);
+		bombExplode(objectItemCurrent->object);
 
-		//[R]state change
+		objectItemCurrent = objectItemCurrent->next;
+
+		objectItemSRemove(&(worldServer->objectItemS), objectItemCurrent->prev, true);
+	}
+
+	//player movement
+	//this should be calculated before fireDestroy() otherwise player would be in fire for 1 tick
+	UserServerItem* userServerItemCurrent = userServerItemS;
+	while(userServerItemCurrent != NULL){
+		for (int i=0; i<userServerItemCurrent->userServer.keySLength; i++){
+			keyBomb(userServerItemCurrent->userServer.keyS[i], &(userServerItemCurrent->userServer));
+			keyMovement(userServerItemCurrent->userServer.keyS[i], &(userServerItemCurrent->userServer));
+		}
+		
+		userServerItemCurrent = userServerItemCurrent->next;
+	}
+
+	//destroy by user
+	objectItemCurrent = worldServer->objectItemS;
+	while(objectItemCurrent != NULL){
+		fireDestroy(objectItemCurrent->object);
 
 		objectItemCurrent = objectItemCurrent->next;
 	}
 
+	//[R]state change
+
 	//user notify
-	UserServerItem* userServerItemCurrent = userServerItemS;
+	userServerItemCurrent = userServerItemS;
 	while(userServerItemCurrent != NULL){
 		//alter user character to be identifiable
-		userServerItemCurrent->userServer.character->type = CharacterTypeYou;		
+		userServerItemCurrent->userServer.character->type = CharacterTypeYou;	
 		networkSendClient(worldServer);
 		userServerItemCurrent->userServer.character->type = CharacterTypeUser;
 
@@ -242,22 +260,29 @@ void keyMovement(SDL_Keycode key, UserServer* userServer){
 		return;
 	}
 	if(objectItemCollisionS != NULL){
-		//player can be inside bomb
-		//it can be inside two bomb
-		//eg: inside firstly placed one and just placed one into neighbourgh position
 		ObjectItem* objectItemCurrent = objectItemCollisionS;
 		while(objectItemCurrent != NULL){
-			if(
-				objectItemCurrent->object->type != ObjectTypeBomb ||
-				objectItemCurrent->object->owner != userServer->character ||
-				objectItemCurrent->object->bombOut
-			){
-				objectItemSFree(objectItemCollisionS, false);
-				characterItemSFree(characterItemCollisionS, false);
-				return;
+			//player can be inside fire (it will die in this exact tick)
+			if(objectItemCurrent->object->type == ObjectTypeBombFire){
+				objectItemCurrent = objectItemCurrent->next;
+				continue;
 			}
 
-			objectItemCurrent = objectItemCurrent->next;
+			//player can be inside bomb
+			//it can be inside two bomb
+			//eg: inside firstly placed one and just placed one into neighbourgh position
+			if(
+				objectItemCurrent->object->type == ObjectTypeBomb &&
+				objectItemCurrent->object->owner == userServer->character &&
+				!objectItemCurrent->object->bombOut
+			){
+				objectItemCurrent = objectItemCurrent->next;
+				continue;
+			}
+
+			objectItemSFree(objectItemCollisionS, false);
+			characterItemSFree(characterItemCollisionS, false);
+			return;
 		}
 	}
 
@@ -356,10 +381,14 @@ void ServerReceive(UserServer* userServerUnsafe){
 		userServer->name[15] = '\0'; //in best case it's already padded
 	}
 
-	//keyS apply
-	for(int i=0; i<userServerUnsafe->keySLength; i++){ //[R] keySLength may be falsified
-		keyBomb(userServerUnsafe->keyS[i], userServer);
-		keyMovement(userServerUnsafe->keyS[i], userServer);
+	//keyS copy
+	//[R] keySLength may be falsified
+	//[R] make values unique
+	free(userServer->keyS);
+	userServer->keySLength = userServerUnsafe->keySLength;
+	userServer->keyS = (SDL_Keycode*) malloc(userServerUnsafe->keySLength * sizeof(SDL_Keycode));
+	for(int i=0; i<userServerUnsafe->keySLength; i++){
+		userServer->keyS[i] = userServerUnsafe->keyS[i];
 	}
 
 	if(SDL_UnlockMutex(mutex) < 0){

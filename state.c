@@ -240,7 +240,7 @@ void userServerItemSFree(UserServerItem* userServerItemS){
 
 		free(userServerItemPrev->userServer.auth);
 		//free(userServerItemPrev->userServer.character); //it is free'd by characterItemSFree
-		free(userServerItemPrev->userServer.keyS); //in best case it's free(NULL)
+		free(userServerItemPrev->userServer.keyS);
 		free(userServerItemPrev->userServer.name);
 		free(userServerItemPrev);
 	}

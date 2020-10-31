@@ -17,11 +17,6 @@ static int tickId;
 
 //ClientSend sends updates to server
 Uint32 ClientSend(Uint32 interval, void *param){
-	//no keys pressed
-	if(userClient->keyItemS == NULL){
-		return interval;
-	}
-
 	if (SDL_LockMutex(mutex) != 0){
 		SDL_Log("ClientSend: SDL_LockMutex: %s", SDL_GetError());
 		exit(1);
