@@ -15,6 +15,7 @@ static const long long tickSecond = tickRate; //tick count in one second
 static int tickId;
 
 //keyMovement calculates user position based on keyItem.key
+//mutex must be locked
 void keyMovement(SDL_Keycode key, UserServer* userServer){
 	if(
 		key != SDLK_w &&
@@ -100,12 +101,16 @@ void keyMovement(SDL_Keycode key, UserServer* userServer){
 }
 
 //keyBomb calculates bomb position based on keyItem.key
+//mutex must be locked
 void keyBomb(SDL_Keycode key, UserServer* userServer){
 	if(key != SDLK_SPACE){
 		return;
 	}
 
-	//[R]bomb available
+	//bomb available
+	if(userServer->character->bombCount == 0){
+		return;
+	}
 
 	Position positionNew = userServer->character->position;
 
@@ -150,8 +155,12 @@ void keyBomb(SDL_Keycode key, UserServer* userServer){
 	};
 	objectItemSInsert(&(worldServer->objectItemS), &object);
 
+	//free
 	objectItemSFree(objectItemCollisionS, false);
 	characterItemSFree(characterItemCollisionS, false);
+
+	//bomb decrease
+	userServer->character->bombCount--;
 }
 
 UserServer* ServerAuthCheck(char* auth){
@@ -232,7 +241,7 @@ void bombExplode(Object* object){
 
 	//bomb remove
 	if(object->owner != NULL){
-		object->owner->bombCount--;
+		object->owner->bombCount++;
 	}
 }
 
@@ -298,8 +307,11 @@ Uint32 ServerTick(Uint32 interval, void *param){
 	UserServerItem* userServerItemCurrent = userServerItemS;
 	while(userServerItemCurrent != NULL){
 		for (int i=0; i<userServerItemCurrent->userServer.keySLength; i++){
-			keyBomb(userServerItemCurrent->userServer.keyS[i], &(userServerItemCurrent->userServer));
-			keyMovement(userServerItemCurrent->userServer.keyS[i], &(userServerItemCurrent->userServer));
+			//if(userServerItemCurrent->userServer != NULL){ [R]
+				//should be before keyMovement as user wants to place bomb on the position currently seeable
+				keyBomb(userServerItemCurrent->userServer.keyS[i], &(userServerItemCurrent->userServer));
+				keyMovement(userServerItemCurrent->userServer.keyS[i], &(userServerItemCurrent->userServer));
+			//}
 		}
 		
 		userServerItemCurrent = userServerItemCurrent->next;
