@@ -4,17 +4,22 @@
 #include <SDL2/SDL.h>
 #include <stdbool.h>
 
+//List
+typedef struct ListItem{
+	struct ListItem* next;
+	struct ListItem* prev;
+	void* data;
+} ListItem;
+
+typedef struct{
+	ListItem* head;
+	int length;
+} List;
+
 //Position
 typedef struct{
 	int y, x;
 } Position;
-
-//Key list
-typedef struct KeyItem{
-	SDL_Keycode key;
-	struct KeyItem* next;
-	struct KeyItem* prev;
-} KeyItem;
 
 //Character
 typedef enum{
@@ -29,14 +34,8 @@ typedef struct{
 	Position velocity;
 	int bombCount; //number of placed bombs for easier check
 	//Object* bombS; //why?
-	char* name;
+	char* name; //not handled by this
 } Character; //seeable by others
-
-typedef struct CharacterItem{
-	Character* character;
-	struct CharacterItem* next;
-	struct CharacterItem* prev;
-} CharacterItem; //Characters may be deleted frequently
 
 //Object
 typedef enum{
@@ -57,16 +56,10 @@ typedef struct{
 	bool bombOut; //only for ObjectTypeBomb signaling whether player has move out from bomb
 } Object;
 
-typedef struct ObjectItem{
-	Object* object;
-	struct ObjectItem* next;
-	struct ObjectItem* prev;
-} ObjectItem; //Objects may be deleted frequently
-
 //World
 typedef struct{
-	ObjectItem* objectItemS;
-	CharacterItem* characterItemS;
+	List* objectList;
+	List* characterList;
 	Position* exit;
 	int height, width;
 } WorldServer;
@@ -92,9 +85,9 @@ typedef struct{
 
 //User
 typedef struct{
-	KeyItem* keyItemS;
+	List* keyList;
 	char* name;
-	Ability* ablityS;
+	List* ablityList; //unused
 	char* auth;
 } UserClient;
 
@@ -103,31 +96,34 @@ typedef struct{
 	int keySLength;
 	char* name; //if NULL then no update
 	char* auth;
-	Character* character; //handled by characterItem
+	Character* character; //not handled by this
 } UserServer;
 
-typedef struct UserItem{
-	UserServer userServer;
-	struct UserItem* next;
-	struct UserItem* prev;
-} UserServerItem;
-
 extern Ability AbilitySpeedExtra;
+void intfree(int* a);
+void* Copy(void* data, size_t size);
 
-KeyItem* keyItemSInsert(KeyItem** keyItemS, SDL_Keycode* key);
-void keyItemSRemove(KeyItem** keyItemS, KeyItem* keyItem);
-void keyItemSFree(KeyItem* keyItemS);
-ObjectItem* objectItemSInsert(ObjectItem** objectItemS, Object* object);
-void objectItemSInsertItem(ObjectItem** objectItemS, ObjectItem* objectItem);
-ObjectItem* objectItemSFind(ObjectItem* objectItemS, Object* object);
-void objectItemSRemove(ObjectItem** objectItemS, ObjectItem* objectItem, bool objectFree);
-void objectItemSFree(ObjectItem* objectItemS, bool objectFree);
-CharacterItem* characterItemSInsert(CharacterItem** characterItemS, Character* character);
-void characterItemSInsertItem(CharacterItem** characterItemS, CharacterItem* characterItem);
-CharacterItem* characterItemSFind(CharacterItem* characterItemS, Character* character);
-void characterItemSRemove(CharacterItem** characterItemS, CharacterItem* characterItem, bool characterFree);
-void characterItemSFree(CharacterItem* characterItemS, bool characterFree);
-UserServerItem* userServerItemSInsert(UserServerItem** userServerItemS, UserServer* userServer);
-void userServerItemSFree(UserServerItem* userServerItemS);
+ListItem* ListInsert(List** list, void* data);
+void ListInsertItem(List** list, ListItem* listItem);
+void ListRemoveItem(List** list, ListItem* listItem, void (*dataFree)());
+ListItem* ListFindItem(List* list, void* data);
+List* ListNew();
+void ListDelete(List* list, void (*dataFree)());
+
+UserClient* UserClientNew();
+void UserClientDelete(UserClient* userClient);
+
+WorldServer* WorldServerNew();
+void WorldServerDelete(WorldServer* worldServer);
+
+WorldClient* WorldClientNew();
+void WorldClientDelete(WorldClient* worldClient);
+
+void ObjectDelete(Object* object);
+
+void CharacterDelete(Character* character);
+
+UserServer* UserServerNew();
+void UserServerDelete(UserServer* userServer);
 
 #endif

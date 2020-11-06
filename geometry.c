@@ -53,44 +53,44 @@ bool collisionLine(Position from, Position to, Position obstacle){
 	return false;
 }
 
-//collisionObjectS
-//free must be called
-ObjectItem* collisionObjectS(ObjectItem* objectItemS, Position from, Position to){
-	ObjectItem* objectItemCollisionS = NULL;
+//collisionObjectS return all collisions in line (from, to)
+//returned list is a reference list, which must be freed without deleting data
+List* collisionObjectS(List* list, Position from, Position to){
+	List* listCollision = ListNew();
 
-	ObjectItem* objectItemCurrent = objectItemS;
-	while(objectItemCurrent != NULL){
-		if(collisionLine(from, to, objectItemCurrent->object->position)){
-			ObjectItem* objectItem = (ObjectItem*) malloc(sizeof(ObjectItem));
-			objectItem->object = objectItemCurrent->object;
+	ListItem* listItemCurrent = list->head;
+	while(listItemCurrent != NULL){
+		if(collisionLine(from, to, ((Object*)listItemCurrent->data)->position)){
+			ListItem* listItem = (ListItem*) malloc(sizeof(ListItem));
+			listItem->data = listItemCurrent->data;
 
-			objectItemSInsertItem(&objectItemCollisionS, objectItem);
+			ListInsertItem(&listCollision, listItem);
 		}
 
-		objectItemCurrent = objectItemCurrent->next;
+		listItemCurrent = listItemCurrent->next;
 	}
 	
-	return objectItemCollisionS;
+	return listCollision;
 }
 
-//collisionCharacterS
-//free must be called
-CharacterItem* collisionCharacterS(CharacterItem* characterItemS, Position from, Position to){
-	CharacterItem* characterItemCollisionS = NULL;
+//collisionCharacterS return all collisions in line (from, to)
+//returned list is a reference list, which must be freed without deleting data
+List* collisionCharacterS(List* list, Position from, Position to){
+	List* listCollision = ListNew();
 
-	CharacterItem* characterItemCurrent = characterItemS;
-	while(characterItemCurrent != NULL){
-		if(collisionLine(from, to, characterItemCurrent->character->position)){
-			CharacterItem* characterItem = (CharacterItem*) malloc(sizeof(CharacterItem));
-			characterItem->character = characterItemCurrent->character;
+	ListItem* listItemCurrent = list->head;
+	while(listItemCurrent != NULL){
+		if(collisionLine(from, to, ((Character*)listItemCurrent->data)->position)){
+			ListItem* listItem = (ListItem*) malloc(sizeof(ListItem));
+			listItem->data = listItemCurrent->data;
 
-			characterItemSInsertItem(&characterItemCollisionS, characterItem);
+			ListInsertItem(&listCollision, listItem);
 		}
 
-		characterItemCurrent = characterItemCurrent->next;
+		listItemCurrent = listItemCurrent->next;
 	}
 	
-	return characterItemCollisionS;
+	return listCollision;
 }
 
 //worldGenerate generates default map
@@ -101,10 +101,7 @@ WorldServer* worldGenerate(int height, int width){
 		exit(1);
 	}
 
-	WorldServer* worldServer = (WorldServer*) malloc(sizeof(WorldServer));
-	worldServer->objectItemS = NULL;
-	worldServer->characterItemS = NULL;
-	worldServer->exit = NULL;
+	WorldServer* worldServer = WorldServerNew();
 	worldServer->height = height;
 	worldServer->width = width;
 	
@@ -116,7 +113,7 @@ WorldServer* worldGenerate(int height, int width){
 				(i % 2 == 0 && j % 2 == 0)
 			){
 				//[R] check collision
-				Object object = (Object){
+				ListInsert(&(worldServer->objectList), Copy(&(Object){
 					.created = -1,
 					.destroy = -1,
 					.position = (Position){
@@ -127,8 +124,7 @@ WorldServer* worldGenerate(int height, int width){
 					.velocity = (Position){0,0},
 					.bombOut = true,
 					.owner = NULL,
-				};
-				objectItemSInsert(&(worldServer->objectItemS), &object);
+				}, sizeof(Object)));
 			}
 		}
 	}
@@ -154,7 +150,7 @@ WorldServer* worldGenerate(int height, int width){
 			x = rand() % width;
 		}
 
-		Object object = (Object){
+		ListInsert(&(worldServer->objectList), Copy(&(Object){
 			.created = -1,
 			.destroy = -1,
 			.position = (Position){
@@ -165,8 +161,7 @@ WorldServer* worldGenerate(int height, int width){
 			.velocity = (Position){0,0},
 			.bombOut = true,
 			.owner = NULL,
-		};
-		objectItemSInsert(&(worldServer->objectItemS), &object);
+		}, sizeof(Object)));
 	}
 
 	return worldServer;

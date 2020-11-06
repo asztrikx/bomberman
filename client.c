@@ -40,10 +40,10 @@ void ClientEventKey(SDL_Event sdl_event){
 
 	//key list update
 	bool in = false;
-	KeyItem* keyItemCurrent = userClient->keyItemS;
-	while(keyItemCurrent != NULL){
-		if(keyItemCurrent->key != sdl_event.key.keysym.sym){
-			keyItemCurrent = keyItemCurrent->next;
+	ListItem* listItemCurrent = userClient->keyList->head;
+	while(listItemCurrent != NULL){
+		if(*(SDL_Keycode*)listItemCurrent->data != sdl_event.key.keysym.sym){
+			listItemCurrent = listItemCurrent->next;
 			continue;
 		}
 			
@@ -55,16 +55,16 @@ void ClientEventKey(SDL_Event sdl_event){
 
 		//key in list, remove
 		if(sdl_event.type == SDL_KEYUP){
-			keyItemSRemove(&(userClient->keyItemS), keyItemCurrent);
+			ListRemoveItem(&(userClient->keyList), listItemCurrent, intfree);
 			break;
 		}
 
-		keyItemCurrent = keyItemCurrent->next;
+		listItemCurrent = listItemCurrent->next;
 	}
 
 	//key not in list, add
 	if(sdl_event.type == SDL_KEYDOWN && !in){
-		keyItemSInsert(&(userClient->keyItemS), &sdl_event.key.keysym.sym);
+		ListInsert(&(userClient->keyList), Copy(&sdl_event.key.keysym.sym, sizeof(SDL_Keycode)));
 	}
 
 	if(SDL_UnlockMutex(mutex) < 0){
@@ -271,11 +271,7 @@ void ClientStart(void){
 
 	//userClient create
 	//not critical section
-	userClient = (UserClient*) malloc(sizeof(UserClient));
-	userClient->ablityS = NULL;
-	userClient->auth = NULL;
-	userClient->keyItemS = NULL;
-	userClient->name = (char*) malloc((15 + 1) * sizeof(char));
+	userClient = UserClientNew();
 
 	//userClient load
 	strcpy(userClient->name, "asd"); //load abstraction
@@ -297,10 +293,7 @@ void ClientStop(void){
 	networkClientStop();
 
 	//abilitySFree(userClient->ablityS);
-	free(userClient->auth);
-	keyItemSFree(userClient->keyItemS);
-	free(userClient->name);
-	free(userClient);
+	UserClientDelete(userClient);
 
 	SDL_DestroyMutex(mutex);
 }

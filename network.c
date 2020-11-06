@@ -24,52 +24,32 @@ void networkClientStart(void){
 //networkSendClient send worldServer to client as WorldClient
 //worldServer is not locked with mutex
 void networkSendClient(WorldServer* worldServer){
-	WorldClient* worldClient = (WorldClient*) malloc(sizeof(WorldClient));
+	WorldClient* worldClient = WorldClientNew();
 
 	//exit
-	if(worldServer->exit == NULL){
-		worldClient->exit = NULL;
-	} else {
+	if(worldServer->exit != NULL){
 		worldClient->exit = (Position*) malloc(sizeof(Position));
 		*(worldClient->exit) = *(worldServer->exit);
 	}
 	
-	//objectS length
-	int objectSLength = 0;
-	ObjectItem* objectItemCurrent = worldServer->objectItemS;
-	while(objectItemCurrent != NULL){
-		++objectSLength;
-
-		objectItemCurrent = objectItemCurrent->next;
-	}
-	worldClient->objectSLength = objectSLength;
-
 	//objectS
-	worldClient->objectS = (Object*) malloc(objectSLength * sizeof(Object));
-	objectItemCurrent = worldServer->objectItemS;
-	for(int i=0; i<objectSLength; i++){
-		worldClient->objectS[i] = *(objectItemCurrent->object);
+	worldClient->objectSLength = worldServer->objectList->length;
+	worldClient->objectS = (Object*) malloc(worldServer->objectList->length * sizeof(Object));
+	ListItem* objectItemCurrent = worldServer->objectList->head;
+	for(int i=0; i<worldServer->objectList->length; i++){
+		worldClient->objectS[i] = *(Object*)(objectItemCurrent->data);
 
 		objectItemCurrent = objectItemCurrent->next;
 	}
-
-	//characterS length
-	int characterSLength = 0;
-	CharacterItem* characterItemCurrent = worldServer->characterItemS;
-	while(characterItemCurrent != NULL){
-		++characterSLength;
-
-		characterItemCurrent = characterItemCurrent->next;
-	}
-	worldClient->characterSLength = characterSLength;
 
 	//characterS
-	worldClient->characterS = (Character*) malloc(characterSLength * sizeof(Character));
-	characterItemCurrent = worldServer->characterItemS;
-	for(int i=0; i<characterSLength; i++){
-		worldClient->characterS[i] = *(characterItemCurrent->character);
+	worldClient->characterSLength = worldServer->characterList->length;
+	worldClient->characterS = (Character*) malloc(worldServer->characterList->length * sizeof(Character));
+	ListItem* listItemCurrent = worldServer->characterList->head;
+	for(int i=0; i<worldServer->characterList->length; i++){
+		worldClient->characterS[i] = *(Character*)listItemCurrent->data;
 
-		characterItemCurrent = characterItemCurrent->next;
+		listItemCurrent = listItemCurrent->next;
 	}
 
 	//send
@@ -78,42 +58,25 @@ void networkSendClient(WorldServer* worldServer){
 	}
 
 	//free
-	free(worldClient->exit);
-	free(worldClient->objectS);
-	free(worldClient->characterS);
-	free(worldClient);
+	WorldClientDelete(worldClient);
 }
 
 //networkSendServer send userClient to server as UserServer
-//keyItemS length must be greater than zero
 void networkSendServer(UserClient* userClient){
-	//keyItemS length
-	int keySLength = 0;
-	KeyItem* keyItemCurrent = userClient->keyItemS;
-	while(keyItemCurrent != NULL){
-		++keySLength;
-
-		keyItemCurrent = keyItemCurrent->next;
-	}
-
 	//keyItemS copy
-	SDL_Keycode* keyS = (SDL_Keycode*) malloc(keySLength * sizeof(SDL_Keycode));
-	keyItemCurrent = userClient->keyItemS;
-	for(int i=0; i<keySLength; i++){
-		keyS[i] = keyItemCurrent->key;
+	SDL_Keycode* keyS = (SDL_Keycode*) malloc(userClient->keyList->length * sizeof(SDL_Keycode));
+	ListItem* listItemCurrent = userClient->keyList->head;
+	for(int i=0; i<userClient->keyList->length; i++){
+		keyS[i] = *(SDL_Keycode*)listItemCurrent->data;
 
-		keyItemCurrent = keyItemCurrent->next;
+		listItemCurrent = listItemCurrent->next;
 	}
 
 	//create userServer
-	UserServer userServerCopy = (UserServer){
-		.auth = (char*) malloc((26 + 1) * sizeof(char)),
-		.character = NULL,
-		.keyS = keyS,
-		.keySLength = keySLength,
-		.name = (char*) malloc((15 + 1) * sizeof(char)),
-	};
-	UserServer* userServer = &userServerCopy;
+	UserServer* userServer = UserServerNew();
+	userServer->keyS = keyS;
+	userServer->keySLength = userClient->keyList->length;
+	
 	strcpy(userServer->auth, userClient->auth);
 	strcpy(userServer->name, userClient->name);
 
@@ -123,10 +86,7 @@ void networkSendServer(UserClient* userClient){
 	}
 
 	//free
-	free(userServer->auth);
-	free(userServer->character); //in best case it's free(NULL)
-	free(userServer->keyS);
-	free(userServer->name);
+	UserServerDelete(userServer);
 }
 
 //networkConnectServer client request to server to create connection

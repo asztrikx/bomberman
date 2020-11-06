@@ -3,245 +3,185 @@
 #include "geometry.h"
 #include <stdlib.h>
 
-KeyItem* keyItemSInsert(KeyItem** keyItemS, SDL_Keycode* key){
-	KeyItem* keyItem = (KeyItem*) malloc(sizeof(KeyItem));
-	keyItem->key = *key;
+void intfree(int* a){free(a);}//[R]
 
-	if(*keyItemS == NULL){ //first element
-		keyItem->next = NULL;
-		keyItem->prev = NULL;
-
-		*keyItemS = keyItem;
-	} else { //insert front
-		keyItem->next = *keyItemS;
-		keyItem->prev = NULL;
-
-		(*keyItemS)->prev = keyItem;
-
-		(*keyItemS) = keyItem;
-	}
-
-	return keyItem;
+void* Copy(void* data, size_t size){
+	unsigned char* copy = (unsigned char*) malloc(size * sizeof(char));
+	memcpy(copy, data, size);
+	return copy;
 }
 
-void keyItemSRemove(KeyItem** keyItemS, KeyItem* keyItem){
-	if(keyItem->prev == NULL){ //first in list
-		*keyItemS = keyItem->next;
+//ListInsert inserts data into list by reference
+ListItem* ListInsert(List** list, void* data){
+	ListItem* listItem = (ListItem*) malloc(sizeof(ListItem));
+	listItem->data = data;
+
+	ListInsertItem(list, listItem);
+
+	return listItem;
+}
+
+//ListInsertItem appends listItem to list by reference
+void ListInsertItem(List** list, ListItem* listItem){
+	if((*list)->head == NULL){ //first element
+		listItem->next = NULL;
+		listItem->prev = NULL;
+	} else { //insert front
+		listItem->next = (*list)->head;
+		listItem->prev = NULL;
+
+		(*list)->head->prev = listItem;
+	}
+
+	(*list)->head = listItem;
+	(*list)->length++;
+}
+
+void ListRemoveItem(List** list, ListItem* listItem, void (*dataFree)()){
+	if(listItem->prev == NULL){ //first in list
+		(*list)->head = listItem->next;
 
 		//last in list also
-		if(keyItem->next != NULL){
-			keyItem->next->prev = NULL;
+		if(listItem->next != NULL){
+			listItem->next->prev = NULL;
 		}
-	} else if (keyItem->next == NULL) { //last in list, but not first
-		keyItem->prev->next = NULL;
+	} else if (listItem->next == NULL) { //last in list, but not first
+		listItem->prev->next = NULL;
 	} else {
-		keyItem->prev->next = keyItem->next;
-		keyItem->next->prev = keyItem->prev;
+		listItem->prev->next = listItem->next;
+		listItem->next->prev = listItem->prev;
 	}
 
 	//free
-	free(keyItem);
+	if(dataFree != NULL){
+		dataFree(listItem->data);
+	}
+	free(listItem);
+	(*list)->length--;
 }
 
-void keyItemSFree(KeyItem* keyItemS){
-	KeyItem* keyItemCurrent = keyItemS;
-	KeyItem* keyItemPrev;
-	while(keyItemCurrent != NULL){
-		keyItemPrev = keyItemCurrent;
-		keyItemCurrent = keyItemCurrent->next;
+//ListFind return ListItem who's data points to data
+ListItem* ListFindItem(List* list, void* data){
+	ListItem* listItemCurrent = list->head;
+	while(listItemCurrent != NULL){
+		if(listItemCurrent->data == data){
+			return listItemCurrent;
+		}
 
-		free(keyItemPrev);
+		listItemCurrent = listItemCurrent->next;
 	}
+
+	return NULL;
+}
+
+List* ListNew(){
+	List* list = (List*) malloc(sizeof(List));
+	list->head = NULL;
+	list->length = 0;
+
+	return list;
+}
+
+//ListDelete frees all ListItem
+void ListDelete(List* list, void (*dataFree)()){
+	ListItem* listItemCurrent = list->head;
+	ListItem* listItemPrev;
+	while(listItemCurrent != NULL){
+		listItemPrev = listItemCurrent;
+		listItemCurrent = listItemCurrent->next;
+
+		if(dataFree != NULL){
+			dataFree(listItemPrev->data);
+		}
+		free(listItemPrev);
+	}
+}
+
+//UserClientNew
+//return must be freed
+UserClient* UserClientNew(){
+	UserClient* userClient = (UserClient*) malloc(sizeof(UserClient));
+	//userClient->ablityList = ListNew();
+	userClient->auth = NULL;
+	userClient->keyList = ListNew();
+	userClient->name = (char*) malloc((15 + 1) * sizeof(char));
+
+	return userClient;
+}
+
+void UserClientDelete(UserClient* userClient){
+	//ListDelete(userClient->ablityList, true);
+	free(userClient->auth);
+	ListDelete(userClient->keyList, intfree);
+	free(userClient->name);
+	free(userClient);
+}
+
+WorldServer* WorldServerNew(){
+	WorldServer* worldServer = (WorldServer*) malloc(sizeof(WorldServer));
+	worldServer->characterList = ListNew();
+	worldServer->exit = NULL;
+	worldServer->height = 0;
+	worldServer->objectList = ListNew();
+	worldServer->width = 0;
+
+	return worldServer;
+}
+
+void WorldServerDelete(WorldServer* worldServer){
+	ListDelete(worldServer->characterList, CharacterDelete);
+	free(worldServer->exit);
+	ListDelete(worldServer->objectList, ObjectDelete);
+	free(worldServer);
+}
+
+WorldClient* WorldClientNew(){
+	WorldClient* worldClient = (WorldClient*) malloc(sizeof(WorldClient));
+	worldClient->characterS = NULL;
+	worldClient->characterSLength = 0;
+	worldClient->exit = NULL;
+	worldClient->objectS = NULL;
+	worldClient->objectSLength = 0;
+
+	return worldClient;
+}
+
+void WorldClientDelete(WorldClient* worldClient){
+	free(worldClient->characterS);
+	free(worldClient->exit);
+	free(worldClient->objectS);
+	free(worldClient);
+}
+
+UserServer* UserServerNew(){
+	UserServer* userServer = (UserServer*) malloc(sizeof(UserServer));
+	userServer->auth = (char*) malloc((26 + 1) * sizeof(char));
+	userServer->character = NULL;
+	userServer->keyS = NULL;
+	userServer->keySLength = 0;
+	userServer->name = (char*) malloc((15 + 1) * sizeof(char));
+
+	return userServer;
+}
+
+void UserServerDelete(UserServer* userServer){
+	free(userServer->auth);
+	//free(userServer->character); //it is not free'd by this
+	free(userServer->keyS);
+	free(userServer->name);
+	free(userServer);
+}
+
+void ObjectDelete(Object* object){
+	//free(object->owner); //not managed by this
+	free(object);
+}
+
+void CharacterDelete(Character* character){
+	//free(character->name); not handled by this
+	free(character);
 }
 
 Ability AbilitySpeedExtra = {
 	.speedExtra = 10,
 };
-
-ObjectItem* objectItemSInsert(ObjectItem** objectItemS, Object* object){
-	ObjectItem* objectItem = (ObjectItem*) malloc(sizeof(ObjectItem));
-	Object* objectCopy = (Object*) malloc(sizeof(Object));
-	*objectCopy = *object;
-	objectItem->object = objectCopy;
-	
-	objectItemSInsertItem(objectItemS, objectItem);
-
-	return objectItem;
-}
-
-void objectItemSInsertItem(ObjectItem** objectItemS, ObjectItem* objectItem){
-	if(*objectItemS == NULL){ //first element
-		objectItem->next = NULL;
-		objectItem->prev = NULL;
-
-		*objectItemS = objectItem;
-	} else { //insert front
-		objectItem->next = *objectItemS;
-		objectItem->prev = NULL;
-
-		(*objectItemS)->prev = objectItem;
-
-		(*objectItemS) = objectItem;
-	}
-}
-
-ObjectItem* objectItemSFind(ObjectItem* objectItemS, Object* object){
-	ObjectItem* objectItemCurrent = objectItemS;
-	while(objectItemCurrent != NULL){
-		if(objectItemCurrent->object == object){
-			return objectItemCurrent;
-		}
-
-		objectItemCurrent = objectItemCurrent->next;
-	}
-
-	return NULL;
-}
-
-void objectItemSRemove(ObjectItem** objectItemS, ObjectItem* objectItem, bool objectFree){
-	//relink
-	if(objectItem->prev == NULL && objectItem->next == NULL){
-		*objectItemS = NULL;
-	} else if(objectItem->prev == NULL){
-		objectItem->next->prev = NULL;
-
-		*objectItemS = objectItem->next;
-	} else if(objectItem->next == NULL){
-		objectItem->prev->next = NULL;
-	} else {
-		objectItem->prev->next = objectItem->next;
-		objectItem->next->prev = objectItem->prev;
-	}
-
-	//free
-	if(objectFree){
-		free(objectItem->object);
-	}
-	free(objectItem);
-}
-
-void objectItemSFree(ObjectItem* objectItemS, bool objectFree){
-	ObjectItem* objectItemCurrent = objectItemS;
-	ObjectItem* objectItemPrev;
-	while(objectItemCurrent != NULL){
-		objectItemPrev = objectItemCurrent;
-		objectItemCurrent = objectItemCurrent->next;
-
-		if(objectFree){
-			free(objectItemPrev->object);
-		}
-		free(objectItemPrev);
-	}
-}
-
-CharacterItem* characterItemSInsert(CharacterItem** characterItemS, Character* character){
-	CharacterItem* characterItem = (CharacterItem*) malloc(sizeof(CharacterItem));
-	Character* characterCopy = (Character*) malloc(sizeof(Character));
-	*characterCopy = *character;
-	characterItem->character = characterCopy;
-	
-	characterItemSInsertItem(characterItemS, characterItem);
-
-	return characterItem;
-}
-
-void characterItemSInsertItem(CharacterItem** characterItemS, CharacterItem* characterItem){
-	if(*characterItemS == NULL){ //first element
-		characterItem->next = NULL;
-		characterItem->prev = NULL;
-
-		*characterItemS = characterItem;
-	} else { //insert front
-		characterItem->next = *characterItemS;
-		characterItem->prev = NULL;
-
-		(*characterItemS)->prev = characterItem;
-
-		(*characterItemS) = characterItem;
-	}
-}
-
-CharacterItem* characterItemSFind(CharacterItem* characterItemS, Character* character){
-	CharacterItem* characterItemCurrent = characterItemS;
-	while(characterItemCurrent != NULL){
-		if(characterItemCurrent->character == character){
-			return characterItemCurrent;
-		}
-
-		characterItemCurrent = characterItemCurrent->next;
-	}
-
-	return NULL;
-}
-
-void characterItemSRemove(CharacterItem** characterItemS, CharacterItem* characterItem, bool characterFree){
-	//relink
-	if(characterItem->prev == NULL && characterItem->next == NULL){
-		*characterItemS = NULL;
-	} else if(characterItem->prev == NULL){
-		characterItem->next->prev = NULL;
-
-		*characterItemS = characterItem->next;
-	} else if(characterItem->next == NULL){
-		characterItem->prev->next = NULL;
-	} else {
-		characterItem->prev->next = characterItem->next;
-		characterItem->next->prev = characterItem->prev;
-	}
-
-	//free
-	if(characterFree){
-		free(characterItem->character);
-	}
-	free(characterItem);
-}
-
-void characterItemSFree(CharacterItem* characterItemS, bool characterFree){
-	CharacterItem* characterItemCurrent = characterItemS;
-	CharacterItem* characterItemPrev;
-	while(characterItemCurrent != NULL){
-		characterItemPrev = characterItemCurrent;
-		characterItemCurrent = characterItemCurrent->next;
-
-		if(characterFree){
-			free(characterItemPrev->character);
-		}
-		free(characterItemPrev);
-	}
-}
-
-UserServerItem* userServerItemSInsert(UserServerItem** userServerItemS, UserServer* userServer){
-	UserServerItem* userServerItem = (UserServerItem*) malloc(sizeof(UserServerItem));
-	userServerItem->userServer = *userServer;
-	
-	if(*userServerItemS == NULL){ //first element
-		userServerItem->next = NULL;
-		userServerItem->prev = NULL;
-
-		*userServerItemS = userServerItem;
-	} else { //insert front
-		userServerItem->next = *userServerItemS;
-		userServerItem->prev = NULL;
-
-		(*userServerItemS)->prev = userServerItem;
-
-		(*userServerItemS) = userServerItem;
-	}
-
-	return userServerItem;
-}
-
-void userServerItemSFree(UserServerItem* userServerItemS){
-	UserServerItem* userServerItemCurrent = userServerItemS;
-	UserServerItem* userServerItemPrev;
-	while(userServerItemCurrent != NULL){
-		userServerItemPrev = userServerItemCurrent;
-		userServerItemCurrent = userServerItemCurrent->next;
-
-		free(userServerItemPrev->userServer.auth);
-		//free(userServerItemPrev->userServer.character); //it is free'd by characterItemSFree
-		free(userServerItemPrev->userServer.keyS);
-		free(userServerItemPrev->userServer.name);
-		free(userServerItemPrev);
-	}
-}

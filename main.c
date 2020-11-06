@@ -6,6 +6,8 @@
 #include "time.h"
 
 int main(int argc, char *argv[]) {
+	//[R] use for loops instead of while
+	//[R] create separate files for structs
 	srand(time(0)); //[R] better seed
 
 	//local
