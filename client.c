@@ -40,10 +40,8 @@ void ClientEventKey(SDL_Event sdl_event){
 
 	//key list update
 	bool in = false;
-	ListItem* listItemCurrent = userClient->keyList->head;
-	while(listItemCurrent != NULL){
-		if(*(SDL_Keycode*)listItemCurrent->data != sdl_event.key.keysym.sym){
-			listItemCurrent = listItemCurrent->next;
+	for(ListItem* item = userClient->keyList->head; item != NULL; item = item->next) {
+		if(*(SDL_Keycode*)item->data != sdl_event.key.keysym.sym){
 			continue;
 		}
 			
@@ -55,11 +53,9 @@ void ClientEventKey(SDL_Event sdl_event){
 
 		//key in list, remove
 		if(sdl_event.type == SDL_KEYUP){
-			ListRemoveItem(&(userClient->keyList), listItemCurrent, intfree);
+			ListRemoveItem(&(userClient->keyList), item, intfree);
 			break;
 		}
-
-		listItemCurrent = listItemCurrent->next;
 	}
 
 	//key not in list, add

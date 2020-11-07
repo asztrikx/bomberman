@@ -28,13 +28,13 @@ typedef enum{
 	CharacterTypeYou,
 } CharacterType;
 
+typedef struct UserServer UserServer;
 typedef struct{
 	Position position;
 	CharacterType type;
 	Position velocity;
 	int bombCount; //number of placed bombs for easier check
-	//Object* bombS; //why?
-	char* name; //not handled by this
+	UserServer* owner; //NULL if server or disconnected player
 } Character; //seeable by others
 
 //Object
@@ -91,13 +91,13 @@ typedef struct{
 	char* auth;
 } UserClient;
 
-typedef struct{
+struct UserServer{
 	SDL_Keycode* keyS;
 	int keySLength;
 	char* name; //if NULL then no update
 	char* auth;
 	Character* character; //not handled by this
-} UserServer;
+};
 
 extern Ability AbilitySpeedExtra;
 void intfree(int* a);
@@ -121,7 +121,11 @@ void WorldClientDelete(WorldClient* worldClient);
 
 void ObjectDelete(Object* object);
 
+Character* CharacterNew();
 void CharacterDelete(Character* character);
+
+Object* ObjectNew();
+void ObjectDelete(Object* object);
 
 UserServer* UserServerNew();
 void UserServerDelete(UserServer* userServer);

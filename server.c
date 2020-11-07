@@ -37,6 +37,7 @@ void keyMovement(SDL_Keycode key, UserServer* userServer){
 		positionNew.x += userServer->character->velocity.x;
 	}
 
+	//collision
 	List* listCollisionObject = collisionObjectS(worldServer->objectList, userServer->character->position, positionNew);
 	List* listCollisionCharacter = collisionCharacterS(worldServer->characterList, userServer->character->position, positionNew);
 
@@ -46,16 +47,14 @@ void keyMovement(SDL_Keycode key, UserServer* userServer){
 		listCollisionCharacter->length != 1 ||
 		listCollisionCharacter->head->data != userServer->character
 	){
-		ListDelete(listCollisionObject, false);
-		ListDelete(listCollisionCharacter, false);
+		ListDelete(listCollisionObject, NULL);
+		ListDelete(listCollisionCharacter, NULL);
 		return;
 	}
 	if(listCollisionObject->length != 0){
-		ListItem* listItemCurrent = listCollisionObject->head;
-		while(listItemCurrent != NULL){
+		for(ListItem* item = listCollisionObject->head; item != NULL; item = item->next){
 			//player can be inside fire (it will die in this exact tick)
-			if(((Object*)listItemCurrent->data)->type == ObjectTypeBombFire){
-				listItemCurrent = listItemCurrent->next;
+			if(((Object*)item->data)->type == ObjectTypeBombFire){
 				continue;
 			}
 
@@ -63,38 +62,37 @@ void keyMovement(SDL_Keycode key, UserServer* userServer){
 			//it can be inside two bomb
 			//eg: inside firstly placed one and just placed one into neighbourgh position
 			if(
-				((Object*)listItemCurrent->data)->type == ObjectTypeBomb &&
-				((Object*)listItemCurrent->data)->owner == userServer->character &&
-				!((Object*)listItemCurrent->data)->bombOut
+				((Object*)item->data)->type == ObjectTypeBomb &&
+				((Object*)item->data)->owner == userServer->character &&
+				!((Object*)item->data)->bombOut
 			){
-				listItemCurrent = listItemCurrent->next;
 				continue;
 			}
 
-			ListDelete(listCollisionObject, false);
-			ListDelete(listCollisionCharacter, false);
+			ListDelete(listCollisionObject, NULL);
+			ListDelete(listCollisionCharacter, NULL);
 			return;
 		}
 	}
 
 	//moved from an area with its own bombs
 	if(listCollisionObject->length != 0){
-		ListItem* listItemCurrent = listCollisionObject->head;
-		while(listItemCurrent != NULL){
+		for(ListItem* item = listCollisionObject->head; item != NULL; item = item->next){
 			//bombs which to player can not move back
 			//(it can be that it moved out from it in the past)
-			if(!collisionPoint(positionNew, ((Object*)listItemCurrent->data)->position)){
-				((Object*)listItemCurrent->data)->bombOut = true;
+			if(
+				((Object*)item->data)->owner == userServer->character &&
+				!collisionPoint(positionNew, ((Object*)item->data)->position
+			)){
+				((Object*)item->data)->bombOut = true;
 			}
-
-			listItemCurrent = listItemCurrent->next;
 		}
 	}
 	
 	userServer->character->position = positionNew;
 
-	ListDelete(listCollisionObject, false);
-	ListDelete(listCollisionCharacter, false);
+	ListDelete(listCollisionObject, NULL);
+	ListDelete(listCollisionCharacter, NULL);
 }
 
 //keyBomb calculates bomb position based on keyItem.key
@@ -121,39 +119,38 @@ void keyBomb(SDL_Keycode key, UserServer* userServer){
 		positionNew.x += squaresize;
 	}
 
-	List* listCollisionObject = collisionObjectS(worldServer->objectList, positionNew, positionNew);
-	List* listCollisionCharacter  = collisionCharacterS(worldServer->characterList, positionNew, positionNew);
+	//collision
+	List* collisionObjectList = collisionObjectS(worldServer->objectList, positionNew, positionNew);
+	List* collisionCharacterList  = collisionCharacterS(worldServer->characterList, positionNew, positionNew);
 
-	if (listCollisionCharacter->head != NULL){
-		if(
-			listCollisionCharacter->head->next != NULL ||
-			listCollisionCharacter->head->data != userServer->character
-		){
-			ListDelete(listCollisionObject, false);
-			ListDelete(listCollisionCharacter, false);
-			return;
-		}
-	}
-	if (listCollisionObject->head != NULL){
-		ListDelete(listCollisionObject, false);
-		ListDelete(listCollisionCharacter, false);
+	if (
+		collisionCharacterList->length != 0 && (
+			collisionCharacterList->length != 1 ||
+			collisionCharacterList->head->data != userServer->character
+		)
+	){
+		ListDelete(collisionObjectList, NULL);
+		ListDelete(collisionCharacterList, NULL);
 		return;
 	}
+	if(collisionObjectList->length != 0){
+		ListDelete(collisionObjectList, NULL);
+		ListDelete(collisionCharacterList, NULL);
+		return;
+	}
+	ListDelete(collisionObjectList, NULL);
+	ListDelete(collisionCharacterList, NULL);
 
 	//bomb insert
-	ListInsert(&(worldServer->objectList), Copy(&(Object){
-		.created = tickCount,
-		.destroy = tickCount + 2 * tickSecond,
-		.position = positionNew,
-		.type = ObjectTypeBomb,
-		.velocity = (Position){0, 0},
-		.bombOut = false,
-		.owner = userServer->character,
-	}, sizeof(Object)));
-
-	//free
-	ListDelete(listCollisionObject, false);
-	ListDelete(listCollisionCharacter, false);
+	Object* object = ObjectNew();
+	object->created = tickCount;
+	object->destroy = tickCount + 2 * tickSecond;
+	object->position = positionNew;
+	object->type = ObjectTypeBomb;
+	object->velocity = (Position){0, 0};
+	object->bombOut = false;
+	object->owner = userServer->character;
+	ListInsert(&(worldServer->objectList), object);
 
 	//bomb decrease
 	userServer->character->bombCount--;
@@ -211,21 +208,21 @@ void bombExplode(Object* object){
 	int directionY[] = {0, 0, 1, -1};
 	for(int i=0; i<=radius; i++){
 		for(int j=0; j<4; j++){
-			ListInsert(&(worldServer->objectList), Copy(&(Object){
-				.bombOut = true,
-				.created = tickCount,
-				.destroy = tickCount + 0.25 * tickSecond,
-				.owner = object->owner,
-				.position = (Position){
-					.y = object->position.y + i * directionY[j] * squaresize,
-					.x = object->position.x + i * directionX[j] * squaresize,
-				},
-				.type = ObjectTypeBombFire,
-				.velocity = (Position) {
-					.y = 0,
-					.x = 0,
-				},
-			}, sizeof(Object)));
+			Object* objectFire = ObjectNew();
+			objectFire->bombOut = true;
+			objectFire->created = tickCount;
+			objectFire->destroy = tickCount + 0.25 * tickSecond;
+			objectFire->owner = object->owner;
+			objectFire->position = (Position){
+				.y = object->position.y + i * directionY[j] * squaresize,
+				.x = object->position.x + i * directionX[j] * squaresize,
+			};
+			objectFire->type = ObjectTypeBombFire;
+			objectFire->velocity = (Position) {
+				.y = 0,
+				.x = 0,
+			};
+			ListInsert(&(worldServer->objectList), objectFire);
 
 			//otherwise there would be 4 fire in the same spot
 			if(i == 0){
@@ -247,31 +244,28 @@ void fireDestroy(Object* object){
 
 	//object collision
 	List* listCollisionObject = collisionObjectS(worldServer->objectList, object->position, object->position);
-
-	ListItem* listItemCurrent = listCollisionObject->head;
-	while(listItemCurrent != NULL){
-		if(((Object*)listItemCurrent->data)->type == ObjectTypeBox){
-			ListItem* listItem = ListFindItem(worldServer->objectList, listItemCurrent->data);
+	for(ListItem* item = listCollisionObject->head; item != NULL; item = item->next){
+		if(((Object*)item->data)->type == ObjectTypeBox){
+			ListItem* listItem = ListFindItem(worldServer->objectList, item->data);
 			ListRemoveItem(&(worldServer->objectList), listItem, ObjectDelete);
-		} else if(((Object*)listItemCurrent->data)->type == ObjectTypeBomb){
+		} else if(((Object*)item->data)->type == ObjectTypeBomb){
 			//bombExplode(objectItemCurrent->object); [R]
 		}
-
-		listItemCurrent = listItemCurrent->next;
 	}
-	ListDelete(listCollisionObject, false);
+	ListDelete(listCollisionObject, NULL);
 
 	//character collision
-	List* listCollisionCharacter = collisionObjectS(worldServer->characterList, object->position, object->position);
+	List* listCollisionCharacter = collisionCharacterS(worldServer->characterList, object->position, object->position);
+	for(ListItem* item = listCollisionCharacter->head; item != NULL; item = item->next){
+		ListItem* listItem = ListFindItem(worldServer->characterList, item->data);
 
-	listItemCurrent = listCollisionCharacter->head;
-	while(listItemCurrent != NULL){
-		ListItem* listItem = ListFindItem(worldServer->characterList, listItemCurrent->data);
+		//remove linking
+		((Character*)listItem->data)->owner->character = NULL;
+
+		//remove item
 		ListRemoveItem(&(worldServer->characterList), listItem, CharacterDelete);
-
-		listItemCurrent = listItemCurrent->next;
 	}
-	ListDelete(listCollisionCharacter, false);
+	ListDelete(listCollisionCharacter, NULL);
 }
 
 //ServerTick calculates new frame, notifies users
@@ -299,38 +293,29 @@ Uint32 ServerTick(Uint32 interval, void *param){
 
 	//player movement
 	//this should be calculated before fireDestroy() otherwise player would be in fire for 1 tick
-	listItemCurrent = userServerList->head;
-	while(listItemCurrent != NULL){
-		for (int i=0; i<((UserServer*)listItemCurrent->data)->keySLength; i++){
+	for(ListItem* item = userServerList->head; item != NULL; item = item->next){
+		for (int i=0; i<((UserServer*)item->data)->keySLength; i++){
 			//if(userServerItemCurrent->userServer != NULL){ [R]
 				//should be before keyMovement as user wants to place bomb on the position currently seeable
-				keyBomb(((UserServer*)listItemCurrent->data)->keyS[i], listItemCurrent->data);
-				keyMovement(((UserServer*)listItemCurrent->data)->keyS[i], listItemCurrent->data);
+				keyBomb(((UserServer*)item->data)->keyS[i], item->data);
+				keyMovement(((UserServer*)item->data)->keyS[i], item->data);
 			//}
 		}
-		
-		listItemCurrent = listItemCurrent->next;
 	}
 
 	//destroy by user
-	listItemCurrent = worldServer->objectList->head;
-	while(listItemCurrent != NULL){
-		fireDestroy(listItemCurrent->data);
-
-		listItemCurrent = listItemCurrent->next;
+	for(ListItem* item = worldServer->objectList->head; item != NULL; item = item->next){
+		fireDestroy(item->data);
 	}
 
 	//[R]state change
 
 	//user notify
-	listItemCurrent = userServerList->head;
-	while(listItemCurrent != NULL){
+	for(ListItem* item = userServerList->head; item != NULL; item = item->next){
 		//alter user character to be identifiable
-		((UserServer*)listItemCurrent->data)->character->type = CharacterTypeYou;	
+		((UserServer*)item->data)->character->type = CharacterTypeYou;	
 		networkSendClient(worldServer);
-		((UserServer*)listItemCurrent->data)->character->type = CharacterTypeUser;
-
-		listItemCurrent = listItemCurrent->next;
+		((UserServer*)item->data)->character->type = CharacterTypeUser;
 	}
 
 	if(SDL_UnlockMutex(mutex) < 0){
@@ -350,7 +335,7 @@ void ServerStart(void){
 
 	//mutex init
 	mutex = SDL_CreateMutex();
-	if (!mutex){
+	if (mutex == NULL){
 		SDL_Log("mutex create: %s", SDL_GetError());
 		exit(1);
 	}
@@ -375,8 +360,17 @@ void ServerReceive(UserServer* userServerUnsafe){
 	}
 
 	//auth validate
+	int length = strnlen(userServerUnsafe->auth, 26 + 1); //[R] strnlen may overindex
+	if(length != 26){
+		return;
+	}
 	UserServer* userServer = ServerAuthCheck(userServerUnsafe->auth); //[R] auth may be shorther than 26
 	if(userServer == NULL){
+		return;
+	}
+
+	//alive
+	if(userServer->character == NULL){
 		return;
 	}
 
@@ -390,6 +384,7 @@ void ServerReceive(UserServer* userServerUnsafe){
 	//[R] keySLength may be falsified
 	//[R] make values unique
 	free(userServer->keyS);
+
 	userServer->keySLength = userServerUnsafe->keySLength;
 	userServer->keyS = (SDL_Keycode*) malloc(userServerUnsafe->keySLength * sizeof(SDL_Keycode));
 	for(int i=0; i<userServerUnsafe->keySLength; i++){
@@ -429,23 +424,17 @@ void ServerStop(void){
 //ServerConnect register new connection user, returns it with auth
 //userServerUnsafe is not used after return
 void ServerConnect(UserServer* userServerUnsafe){
-	//[R]check if game is running
-
 	if (SDL_LockMutex(mutex) != 0){
 		SDL_Log("ServerConnect: SDL_LockMutex: %s", SDL_GetError());
 		exit(1);
 	}
 
-	//userServer insert
-	UserServer* userServer = Copy(&(UserServer){
-		.auth = NULL,
-		.character = NULL,
-		.keyS = NULL,
-		.keySLength = 0,
-		.name = (char*) malloc((15 + 1) * sizeof(char)),
-	}, sizeof(UserServer));
+	//userServer copy
+	UserServer* userServer = UserServerNew();
 	strncpy(userServer->name, userServerUnsafe->name, 15);
 	userServer->name[15] = '\0';
+
+	//userServer insert
 	ListInsert(&userServerList, userServer);
 
 	//id generate
@@ -454,6 +443,7 @@ void ServerConnect(UserServer* userServerUnsafe){
 		
 		//id exists
 		if(ServerAuthCheck(auth) == NULL){
+			free(userServer->auth);
 			userServer->auth = auth;
 			break;
 		}
@@ -491,32 +481,32 @@ void ServerConnect(UserServer* userServerUnsafe){
 		position.y = positionCompressed.y * squaresize;
 		position.x = positionCompressed.x * squaresize;
 
-		free(collisionListObject);
-		free(collisionListCharacter);
+		ListDelete(collisionListObject, NULL);
+		ListDelete(collisionListCharacter, NULL);
 		collisionListObject = collisionObjectS(worldServer->objectList, position, position);
 		collisionListCharacter = collisionCharacterS(worldServer->objectList, position, position);
 	}
+	ListDelete(collisionListObject, NULL);
+	ListDelete(collisionListCharacter, NULL);
 
-	//[R]clear area
+	//[R]clear area to have a playable spawn
 
 	//character insert
-	ListItem* listItemCharacter = ListInsert(&(worldServer->characterList), Copy(&(Character){
-		.bombCount = 1,
-		.name = userServer->name,
-		.position = (Position) {
-			position.y,
-			position.x
-		},
-		.type = CharacterTypeUser,
-		.velocity = velocity,
-	}, sizeof(Character)));
+	Character* character = CharacterNew();
+	character->bombCount = 1;
+	character->owner = userServer;
+	character->position = (Position) {
+		position.y,
+		position.x
+	};
+	character->type = CharacterTypeUser;
+	character->velocity = velocity;
+	ListInsert(&(worldServer->characterList), character);
 
 	//character associate
-	userServer->character = (Character*)listItemCharacter->data;
+	userServer->character = character;
 
 	//reply
-	free(userServerUnsafe->auth); //in best case it's free(NULL)
-	userServerUnsafe->auth = (char*) malloc((26 + 1) * sizeof(char));
 	strcpy(userServerUnsafe->auth, userServer->auth);
 
 	if(SDL_UnlockMutex(mutex) < 0){

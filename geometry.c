@@ -58,16 +58,13 @@ bool collisionLine(Position from, Position to, Position obstacle){
 List* collisionObjectS(List* list, Position from, Position to){
 	List* listCollision = ListNew();
 
-	ListItem* listItemCurrent = list->head;
-	while(listItemCurrent != NULL){
-		if(collisionLine(from, to, ((Object*)listItemCurrent->data)->position)){
+	for(ListItem* item = list->head; item != NULL; item = item->next){
+		if(collisionLine(from, to, ((Object*)item->data)->position)){
 			ListItem* listItem = (ListItem*) malloc(sizeof(ListItem));
-			listItem->data = listItemCurrent->data;
+			listItem->data = item->data;
 
 			ListInsertItem(&listCollision, listItem);
 		}
-
-		listItemCurrent = listItemCurrent->next;
 	}
 	
 	return listCollision;
@@ -78,16 +75,13 @@ List* collisionObjectS(List* list, Position from, Position to){
 List* collisionCharacterS(List* list, Position from, Position to){
 	List* listCollision = ListNew();
 
-	ListItem* listItemCurrent = list->head;
-	while(listItemCurrent != NULL){
-		if(collisionLine(from, to, ((Character*)listItemCurrent->data)->position)){
+	for(ListItem* item = list->head; item != NULL; item = item->next){
+		if(collisionLine(from, to, ((Character*)item->data)->position)){
 			ListItem* listItem = (ListItem*) malloc(sizeof(ListItem));
-			listItem->data = listItemCurrent->data;
+			listItem->data = item->data;
 
 			ListInsertItem(&listCollision, listItem);
 		}
-
-		listItemCurrent = listItemCurrent->next;
 	}
 	
 	return listCollision;
@@ -113,18 +107,18 @@ WorldServer* worldGenerate(int height, int width){
 				(i % 2 == 0 && j % 2 == 0)
 			){
 				//[R] check collision
-				ListInsert(&(worldServer->objectList), Copy(&(Object){
-					.created = -1,
-					.destroy = -1,
-					.position = (Position){
+				Object* object = ObjectNew();
+				object->created = -1;
+				object->destroy = -1;
+				object->position = (Position){
 						.y = i * squaresize,
 						.x = j * squaresize,
-					},
-					.type = ObjectTypeWall,
-					.velocity = (Position){0,0},
-					.bombOut = true,
-					.owner = NULL,
-				}, sizeof(Object)));
+					};
+				object->type = ObjectTypeWall;
+				object->velocity = (Position){0,0};
+				object->bombOut = true;
+				object->owner = NULL;
+				ListInsert(&(worldServer->objectList), object);
 			}
 		}
 	}
@@ -150,18 +144,18 @@ WorldServer* worldGenerate(int height, int width){
 			x = rand() % width;
 		}
 
-		ListInsert(&(worldServer->objectList), Copy(&(Object){
-			.created = -1,
-			.destroy = -1,
-			.position = (Position){
+		Object* object = ObjectNew();
+		object->created = -1;
+		object->destroy = -1;
+		object->position = (Position){
 				.y = y * squaresize,
 				.x = x * squaresize,
-			},
-			.type = ObjectTypeBox,
-			.velocity = (Position){0,0},
-			.bombOut = true,
-			.owner = NULL,
-		}, sizeof(Object)));
+			};
+		object->type = ObjectTypeBox;
+		object->velocity = (Position){0,0};
+		object->bombOut = true;
+		object->owner = NULL;
+		ListInsert(&(worldServer->objectList), object);
 	}
 
 	return worldServer;

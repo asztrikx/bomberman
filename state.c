@@ -95,6 +95,8 @@ void ListDelete(List* list, void (*dataFree)()){
 		}
 		free(listItemPrev);
 	}
+
+	free(list);
 }
 
 //UserClientNew
@@ -102,7 +104,7 @@ void ListDelete(List* list, void (*dataFree)()){
 UserClient* UserClientNew(){
 	UserClient* userClient = (UserClient*) malloc(sizeof(UserClient));
 	//userClient->ablityList = ListNew();
-	userClient->auth = NULL;
+	userClient->auth = (char*) malloc((26 + 1) * sizeof(char));
 	userClient->keyList = ListNew();
 	userClient->name = (char*) malloc((15 + 1) * sizeof(char));
 
@@ -110,7 +112,7 @@ UserClient* UserClientNew(){
 }
 
 void UserClientDelete(UserClient* userClient){
-	//ListDelete(userClient->ablityList, true);
+	//ListDelete(userClient->ablityList, );
 	free(userClient->auth);
 	ListDelete(userClient->keyList, intfree);
 	free(userClient->name);
@@ -172,13 +174,27 @@ void UserServerDelete(UserServer* userServer){
 	free(userServer);
 }
 
+Object* ObjectNew(){
+	Object* object = (Object*) malloc(sizeof(Object));
+	object->owner = NULL;
+
+	return object;
+}
+
 void ObjectDelete(Object* object){
-	//free(object->owner); //not managed by this
+	//free(object->owner) not handled by this
 	free(object);
 }
 
+Character* CharacterNew(){
+	Character* character = (Character*) malloc(sizeof(Character));
+	character->owner = NULL;
+
+	return character;
+}
+
 void CharacterDelete(Character* character){
-	//free(character->name); not handled by this
+	//free(character->owner); not handled by this
 	free(character);
 }
 
