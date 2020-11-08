@@ -28,8 +28,8 @@ int main(int argc, char *argv[]) {
 		}
 		//[R] close error not responding
 
-		ServerStop();
 		ClientStop();
+		ServerStop();
 		
 		//TTF_Quit();
 		SDL_Quit();

@@ -15,7 +15,6 @@ static const long long tickSecond = tickRate; //tick count in one second
 static int tickId;
 
 //keyMovement calculates user position based on keyItem.key
-//mutex must be locked
 void keyMovement(SDL_Keycode key, UserServer* userServer){
 	if(
 		key != SDLK_w &&
@@ -96,7 +95,6 @@ void keyMovement(SDL_Keycode key, UserServer* userServer){
 }
 
 //keyBomb calculates bomb position based on keyItem.key
-//mutex must be locked
 void keyBomb(SDL_Keycode key, UserServer* userServer){
 	if(key != SDLK_SPACE){
 		return;
@@ -157,26 +155,22 @@ void keyBomb(SDL_Keycode key, UserServer* userServer){
 }
 
 UserServer* ServerAuthCheck(char* auth){
-	ListItem* listItemCurrent = userServerList->head;
-	while(listItemCurrent != NULL){
+	for(ListItem* item = userServerList->head; item != NULL; item = item->next){
 		//connecting user
-		if(((UserServer*)listItemCurrent->data)->auth == NULL){
-			listItemCurrent = listItemCurrent->next;
+		if(((UserServer*)item->data)->auth == NULL){
 			continue;
 		}
 
 		//timing attack safe compare
 		bool diff = false;
 		for(int i=0; i<26; i++){
-			if(auth[i] != ((UserServer*)listItemCurrent->data)->auth[i]){
+			if(auth[i] != ((UserServer*)item->data)->auth[i]){
 				diff = true;
 			}
 		}
 		if(!diff){
-			return (UserServer*)(listItemCurrent->data);
+			return (UserServer*)(item->data);
 		}
-
-		listItemCurrent = listItemCurrent->next;
 	}
 
 	return NULL;
@@ -259,7 +253,7 @@ void fireDestroy(Object* object){
 	for(ListItem* item = listCollisionCharacter->head; item != NULL; item = item->next){
 		ListItem* listItem = ListFindItem(worldServer->characterList, item->data);
 
-		//remove linking
+		//make character dead
 		((Character*)listItem->data)->owner->character = NULL;
 
 		//remove item
@@ -294,12 +288,14 @@ Uint32 ServerTick(Uint32 interval, void *param){
 	//player movement
 	//this should be calculated before fireDestroy() otherwise player would be in fire for 1 tick
 	for(ListItem* item = userServerList->head; item != NULL; item = item->next){
+		if(((UserServer*)item->data)->character == NULL){
+			continue;
+		}
+
 		for (int i=0; i<((UserServer*)item->data)->keySLength; i++){
-			//if(userServerItemCurrent->userServer != NULL){ [R]
-				//should be before keyMovement as user wants to place bomb on the position currently seeable
-				keyBomb(((UserServer*)item->data)->keyS[i], item->data);
-				keyMovement(((UserServer*)item->data)->keyS[i], item->data);
-			//}
+			//should be before keyMovement as user wants to place bomb on the position currently seeable
+			keyBomb(((UserServer*)item->data)->keyS[i], item->data);
+			keyMovement(((UserServer*)item->data)->keyS[i], item->data);
 		}
 	}
 
@@ -313,9 +309,13 @@ Uint32 ServerTick(Uint32 interval, void *param){
 	//user notify
 	for(ListItem* item = userServerList->head; item != NULL; item = item->next){
 		//alter user character to be identifiable
-		((UserServer*)item->data)->character->type = CharacterTypeYou;	
+		if(((UserServer*)item->data)->character != NULL){
+			((UserServer*)item->data)->character->type = CharacterTypeYou;	
+		}
 		networkSendClient(worldServer);
-		((UserServer*)item->data)->character->type = CharacterTypeUser;
+		if(((UserServer*)item->data)->character != NULL){
+			((UserServer*)item->data)->character->type = CharacterTypeUser;	
+		}
 	}
 
 	if(SDL_UnlockMutex(mutex) < 0){
@@ -362,15 +362,27 @@ void ServerReceive(UserServer* userServerUnsafe){
 	//auth validate
 	int length = strnlen(userServerUnsafe->auth, 26 + 1); //[R] strnlen may overindex
 	if(length != 26){
+		if(SDL_UnlockMutex(mutex) < 0){
+			SDL_Log("ServerReceive: mutex unlock: %s", SDL_GetError());
+			exit(1);
+		}
 		return;
 	}
 	UserServer* userServer = ServerAuthCheck(userServerUnsafe->auth); //[R] auth may be shorther than 26
 	if(userServer == NULL){
+		if(SDL_UnlockMutex(mutex) < 0){
+			SDL_Log("ServerReceive: mutex unlock: %s", SDL_GetError());
+			exit(1);
+		}
 		return;
 	}
 
 	//alive
 	if(userServer->character == NULL){
+		if(SDL_UnlockMutex(mutex) < 0){
+			SDL_Log("ServerReceive: mutex unlock: %s", SDL_GetError());
+			exit(1);
+		}
 		return;
 	}
 
