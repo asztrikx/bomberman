@@ -1,8 +1,8 @@
 #ifndef NETWORK_H_INCLUDED
 #define NETWORK_H_INCLUDED
 
-#include "type/client/user.h"
-#include "type/server/world.h"
+#include "type/user/client.h"
+#include "type/world/server.h"
 
 void networkServerStop(void);
 void networkServerStart(void);

@@ -5,8 +5,8 @@
 #include <SDL2/SDL_ttf.h>
 #include <stdlib.h>
 #include "SDL.h"
-#include "type/client/user.h"
-#include "type/client/world.h"
+#include "type/user/client.h"
+#include "type/world/client.h"
 #include "type/geometry.h"
 #include "config.h"
 #include "network.h"

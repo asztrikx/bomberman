@@ -3,7 +3,7 @@
 
 #include "type/geometry.h"
 #include "type/list.h"
-#include "type/server/world.h"
+#include "type/world/server.h"
 
 bool collisionPoint(Position position1, Position position2);
 bool collisionLine(Position from, Position to, Position obstacle);

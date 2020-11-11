@@ -4,7 +4,8 @@
 #include "geometry.h"
 #include "network.h"
 #include "type/object.h"
-#include "type/server/user.h"
+#include "type/user/server.h"
+#include "type/world/server.h"
 #include "type/character.h"
 #include "config.h"
 

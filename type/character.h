@@ -2,7 +2,7 @@
 #define TYPE_CHARACTER_H_INCLUDED
 
 #include "geometry.h"
-#include "server/user.h"
+#include "user/server.h"
 
 typedef enum{
 	CharacterTypeUser,
