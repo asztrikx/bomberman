@@ -3,37 +3,8 @@
 		{
 			"type": "shell",
 			"label": "C/C++: gcc build active file",
-			"command": "/usr/bin/gcc",
-			"args": [
-				"-g",
-				"-Wall",
-				"-pedantic",
-				"-lm",
-				"-Werror",
-				//`sdl2-config --cflags --libs`
-				"-I/usr/include/SDL2",
-				"-D_REENTRANT",
-				"-L/usr/lib",
-				"-pthread",
-				"-lSDL2",
-				
-				"-lSDL2_gfx",
-				"-lSDL2_ttf",
-				"-lSDL2_image",
-				"-lSDL2_mixer",
-				
-				//"*.c",
-				"main.c",
-				"client.c",
-				"geometry.c",
-				"network.c",
-				"SDL.c",
-				"server.c",
-				"state.c",
-
-				"-o",
-				"${fileDirname}/main"
-			],
+			"command": "${workspaceFolder}/.vscode/build.sh",
+			"args": [],
 			"options": {
 				"cwd": "${workspaceFolder}"
 			},
