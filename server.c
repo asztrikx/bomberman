@@ -18,7 +18,22 @@ static const unsigned int tickRate = 60u;
 static const long long tickSecond = tickRate; //tick count in one second
 static int tickId;
 
+UserServer* listFindByFunctionCharacterOwnerVariable;
+bool listFindByFunctionCharacterOwnerFunction(void* data){
+	return ((Character*)data)->owner == listFindByFunctionCharacterOwnerVariable;
+}
+Character* characterFind(UserServer* userServer){
+	listFindByFunctionCharacterOwnerVariable = userServer;
+	ListItem* listItem = ListFindItemByFunction(worldServer->characterList, listFindByFunctionCharacterOwnerFunction);
+	
+	if(listItem == NULL){
+		return NULL;
+	}
+	return listItem->data;
+}
+
 //keyMovement calculates user position based on keyItem.key
+//userServer must have a character
 void keyMovement(SDL_Keycode key, UserServer* userServer){
 	if(
 		key != SDLK_w &&
@@ -29,26 +44,28 @@ void keyMovement(SDL_Keycode key, UserServer* userServer){
 		return;
 	}
 
-	Position positionNew = userServer->character->position;
+	Character* character = characterFind(userServer);
+
+	Position positionNew = character->position;
 	if(key == SDLK_w){
-		positionNew.y -= userServer->character->velocity.y;
+		positionNew.y -= character->velocity.y;
 	} else if(key == SDLK_a){
-		positionNew.x -= userServer->character->velocity.x;
+		positionNew.x -= character->velocity.x;
 	} else if(key == SDLK_s){
-		positionNew.y += userServer->character->velocity.y;
+		positionNew.y += character->velocity.y;
 	} else if(key == SDLK_d){
-		positionNew.x += userServer->character->velocity.x;
+		positionNew.x += character->velocity.x;
 	}
 
 	//collision
-	List* listCollisionObject = collisionObjectS(worldServer->objectList, userServer->character->position, positionNew);
-	List* listCollisionCharacter = collisionCharacterS(worldServer->characterList, userServer->character->position, positionNew);
+	List* listCollisionObject = collisionObjectS(worldServer->objectList, character->position, positionNew);
+	List* listCollisionCharacter = collisionCharacterS(worldServer->characterList, character->position, positionNew);
 
 	//[R] collision should not drop position new, just cut it &positionNew to functions
 
 	if (
 		listCollisionCharacter->length != 1 ||
-		listCollisionCharacter->head->data != userServer->character
+		listCollisionCharacter->head->data != character
 	){
 		ListDelete(listCollisionObject, NULL);
 		ListDelete(listCollisionCharacter, NULL);
@@ -66,7 +83,7 @@ void keyMovement(SDL_Keycode key, UserServer* userServer){
 			//eg: inside firstly placed one and just placed one into neighbourgh position
 			if(
 				((Object*)item->data)->type == ObjectTypeBomb &&
-				((Object*)item->data)->owner == userServer->character &&
+				((Object*)item->data)->owner == character &&
 				!((Object*)item->data)->bombOut
 			){
 				continue;
@@ -84,7 +101,7 @@ void keyMovement(SDL_Keycode key, UserServer* userServer){
 			//bombs which to player can not move back
 			//(it can be that it moved out from it in the past)
 			if(
-				((Object*)item->data)->owner == userServer->character &&
+				((Object*)item->data)->owner == character &&
 				!collisionPoint(positionNew, ((Object*)item->data)->position
 			)){
 				((Object*)item->data)->bombOut = true;
@@ -92,7 +109,7 @@ void keyMovement(SDL_Keycode key, UserServer* userServer){
 		}
 	}
 	
-	userServer->character->position = positionNew;
+	character->position = positionNew;
 
 	ListDelete(listCollisionObject, NULL);
 	ListDelete(listCollisionCharacter, NULL);
@@ -104,20 +121,22 @@ void keyBomb(SDL_Keycode key, UserServer* userServer){
 		return;
 	}
 
+	Character* character = characterFind(userServer);
+
 	//bomb available
-	if(userServer->character->bombCount == 0){
+	if(character->bombCount == 0){
 		return;
 	}
 
-	Position positionNew = userServer->character->position;
+	Position positionNew = character->position;
 
 	//position
 	positionNew.y -= positionNew.y % squaresize;
 	positionNew.x -= positionNew.x % squaresize;
-	if (userServer->character->position.y % squaresize > squaresize / 2){
+	if (character->position.y % squaresize > squaresize / 2){
 		positionNew.y += squaresize;
 	}
-	if (userServer->character->position.x % squaresize > squaresize / 2){
+	if (character->position.x % squaresize > squaresize / 2){
 		positionNew.x += squaresize;
 	}
 
@@ -128,7 +147,7 @@ void keyBomb(SDL_Keycode key, UserServer* userServer){
 	if (
 		collisionCharacterList->length != 0 && (
 			collisionCharacterList->length != 1 ||
-			collisionCharacterList->head->data != userServer->character
+			collisionCharacterList->head->data != character
 		)
 	){
 		ListDelete(collisionObjectList, NULL);
@@ -151,11 +170,11 @@ void keyBomb(SDL_Keycode key, UserServer* userServer){
 	object->type = ObjectTypeBomb;
 	object->velocity = (Position){0, 0};
 	object->bombOut = false;
-	object->owner = userServer->character;
+	object->owner = character;
 	ListInsert(&(worldServer->objectList), object);
 
 	//bomb decrease
-	userServer->character->bombCount--;
+	character->bombCount--;
 }
 
 UserServer* ServerAuthCheck(char* auth){
@@ -244,7 +263,7 @@ void fireDestroy(Object* object){
 	List* listCollisionObject = collisionObjectS(worldServer->objectList, object->position, object->position);
 	for(ListItem* item = listCollisionObject->head; item != NULL; item = item->next){
 		if(((Object*)item->data)->type == ObjectTypeBox){
-			ListItem* listItem = ListFindItem(worldServer->objectList, item->data);
+			ListItem* listItem = ListFindItemByPointer(worldServer->objectList, item->data);
 			ListRemoveItem(&(worldServer->objectList), listItem, ObjectDelete);
 		} else if(((Object*)item->data)->type == ObjectTypeBomb){
 			//bombExplode(objectItemCurrent->object); [R]
@@ -255,12 +274,8 @@ void fireDestroy(Object* object){
 	//character collision
 	List* listCollisionCharacter = collisionCharacterS(worldServer->characterList, object->position, object->position);
 	for(ListItem* item = listCollisionCharacter->head; item != NULL; item = item->next){
-		ListItem* listItem = ListFindItem(worldServer->characterList, item->data);
-	
-		//make character dead
-		((Character*)listItem->data)->owner->character = NULL;
-
 		//remove item
+		ListItem* listItem = ListFindItemByPointer(worldServer->characterList, item->data);
 		ListRemoveItem(&(worldServer->characterList), listItem, CharacterDelete);
 	}
 	ListDelete(listCollisionCharacter, NULL);
@@ -292,7 +307,8 @@ Uint32 ServerTick(Uint32 interval, void *param){
 	//player movement
 	//this should be calculated before fireDestroy() otherwise player would be in fire for 1 tick
 	for(ListItem* item = userServerList->head; item != NULL; item = item->next){
-		if(((UserServer*)item->data)->character == NULL){
+		Character* character = characterFind((UserServer*)item->data);
+		if(character == NULL){
 			continue;
 		}
 
@@ -312,13 +328,15 @@ Uint32 ServerTick(Uint32 interval, void *param){
 
 	//user notify
 	for(ListItem* item = userServerList->head; item != NULL; item = item->next){
+		Character* character = characterFind((UserServer*)item->data);
+
 		//alter user character to be identifiable
-		if(((UserServer*)item->data)->character != NULL){
-			((UserServer*)item->data)->character->type = CharacterTypeYou;	
+		if(character != NULL){
+			character->type = CharacterTypeYou;	
 		}
 		networkSendClient(worldServer);
-		if(((UserServer*)item->data)->character != NULL){
-			((UserServer*)item->data)->character->type = CharacterTypeUser;	
+		if(character != NULL){
+			character->type = CharacterTypeUser;	
 		}
 	}
 
@@ -380,9 +398,10 @@ void ServerReceive(UserServer* userServerUnsafe){
 		}
 		return;
 	}
+	Character* character = characterFind(userServer);
 
 	//alive
-	if(userServer->character == NULL){
+	if(character == NULL){
 		if(SDL_UnlockMutex(mutex) < 0){
 			SDL_Log("ServerReceive: mutex unlock: %s", SDL_GetError());
 			exit(1);
@@ -518,9 +537,6 @@ void ServerConnect(UserServer* userServerUnsafe){
 	character->type = CharacterTypeUser;
 	character->velocity = velocity;
 	ListInsert(&(worldServer->characterList), character);
-
-	//character associate
-	userServer->character = character;
 
 	//reply
 	strcpy(userServerUnsafe->auth, userServer->auth);

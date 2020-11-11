@@ -1,6 +1,7 @@
 #include "../debugmalloc.h"
 #include "list.h"
 #include <stdlib.h>
+#include <stdbool.h>
 
 //ListInsert inserts data into List by reference
 ListItem* ListInsert(List** list, void* data){
@@ -53,11 +54,11 @@ void ListRemoveItem(List** list, ListItem* listItem, void (*dataFree)()){
 	(*list)->length--;
 }
 
-//ListFind returns first ListItem where ListItem->data == data
-ListItem* ListFindItem(List* list, void* data){
+//ListFindItemByFunction returns first ListItem where func(ListItem->data) holds
+ListItem* ListFindItemByFunction(List* list, bool (*func)(void*)){
 	ListItem* listItemCurrent = list->head;
 	while(listItemCurrent != NULL){
-		if(listItemCurrent->data == data){
+		if(func(listItemCurrent->data)){
 			return listItemCurrent;
 		}
 
@@ -65,6 +66,17 @@ ListItem* ListFindItem(List* list, void* data){
 	}
 
 	return NULL;
+}
+
+void* listFindItemByPointerVariable;
+bool listFindItemByPointerFunction(void* data){
+	return data == listFindItemByPointerVariable;
+}
+//ListFindItemByPointer returns first ListItem where ListItem->data == data
+//can not be run in parallel
+ListItem* ListFindItemByPointer(List* list, void* data){
+	listFindItemByPointerVariable = data;
+	return ListFindItemByFunction(list, listFindItemByPointerFunction);
 }
 
 //ListNew creates a new List
