@@ -3,7 +3,6 @@
 #include <SDL2/SDL.h>
 #include "server.h"
 #include "client.h"
-#include "state.h"
 
 bool serverStop = true;
 void networkServerStop(void){

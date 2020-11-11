@@ -2,12 +2,9 @@
 #include "geometry.h"
 #include <math.h>
 #include <stdint.h>
-#include "state.h"
-
-int squaresize = 50;
-Position velocity = {10, 10};
-int windowHeight = 480;
-int windowWidth = 640;
+#include "config.h"
+#include "type/geometry.h"
+#include "type/object.h"
 
 bool collisionPoint(Position position1, Position position2){
 	if(abs(position1.x - position2.x) >= squaresize){

@@ -5,9 +5,12 @@
 #include <SDL2/SDL_ttf.h>
 #include <stdlib.h>
 #include "SDL.h"
-#include "state.h"
-#include "geometry.h"
+#include "type/client/user.h"
+#include "type/client/world.h"
+#include "type/geometry.h"
+#include "config.h"
 #include "network.h"
+#include "state.h"
 
 static SDL_mutex* mutex;
 static UserClient* userClient;

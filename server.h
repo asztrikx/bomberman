@@ -1,7 +1,7 @@
 #ifndef SERVER_H_INCLUDED
 #define SERVER_H_INCLUDED
 
-#include "state.h"
+#include "type/server/user.h"
 
 void ServerReceive(UserServer* userServerUnsafe);
 void ServerConnect(UserServer* userServerUnsafe);

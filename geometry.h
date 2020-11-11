@@ -1,12 +1,9 @@
 #ifndef GEOMETRY_H_INCLUDED
 #define GEOMETRY_H_INCLUDED
 
-#include "state.h"
-
-extern int squaresize;
-extern Position velocity;
-extern int windowHeight;
-extern int windowWidth;
+#include "type/geometry.h"
+#include "type/list.h"
+#include "type/server/world.h"
 
 bool collisionPoint(Position position1, Position position2);
 bool collisionLine(Position from, Position to, Position obstacle);

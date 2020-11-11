@@ -2,7 +2,7 @@
 #include "SDL.h"
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
-#include "geometry.h"
+#include "config.h"
 
 SDL_Window* SDLWindow;
 SDL_Renderer* SDLRenderer;

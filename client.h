@@ -1,7 +1,7 @@
 #ifndef CLIENT_H_INCLUDED
 #define CLIENT_H_INCLUDED
 
-#include "state.h"
+#include "type/client/world.h"
 
 void ClientEventKey(SDL_Event sdl_event);
 void ClientConnect(void);

@@ -1,9 +1,12 @@
 #include "debugmalloc.h"
 #include "server.h"
 #include <stdbool.h>
-#include "state.h"
 #include "geometry.h"
 #include "network.h"
+#include "type/object.h"
+#include "type/server/user.h"
+#include "type/character.h"
+#include "config.h"
 
 //mutex handles all global variable which is modified in critical sections
 static SDL_mutex* mutex;
@@ -252,7 +255,7 @@ void fireDestroy(Object* object){
 	List* listCollisionCharacter = collisionCharacterS(worldServer->characterList, object->position, object->position);
 	for(ListItem* item = listCollisionCharacter->head; item != NULL; item = item->next){
 		ListItem* listItem = ListFindItem(worldServer->characterList, item->data);
-
+	
 		//make character dead
 		((Character*)listItem->data)->owner->character = NULL;
 
