@@ -422,7 +422,7 @@ void ServerStop(void){
 		exit(1);
 	}
 
-	networkServerStop();
+	networkServerStop(); //[R] should be a mutex in network otherwise a lock can be stuck
 
 	//free worldServer
 	WorldServerDelete(worldServer);
