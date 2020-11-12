@@ -7,5 +7,7 @@ extern int squaresize;
 extern Position velocity;
 extern int windowHeight;
 extern int windowWidth;
+extern const unsigned int tickRate;
+extern const long long tickSecond;
 
 #endif

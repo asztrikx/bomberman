@@ -4,18 +4,19 @@
 #include <SDL2/SDL2_gfxPrimitives.h>
 #include <SDL2/SDL_ttf.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include "SDL.h"
 #include "type/user/client.h"
 #include "type/world/client.h"
 #include "type/geometry.h"
+#include "type/array.h"
+#include "type/animation.h"
 #include "config.h"
 #include "network.h"
 #include "state.h"
 
 static SDL_mutex* mutex;
 static UserClient* userClient;
-//static long long tickCount = 0; //should be fine for years?
-static unsigned int tickRate = 60u;
 static int tickId;
 
 //ClientSend sends updates to server
@@ -79,14 +80,14 @@ void ClientConnect(void){
 	networkConnectServer(userClient); //not critical section
 
 	//server updater
-	tickId = SDL_AddTimer(1000u/tickRate, ClientSend, NULL);
+	tickId = SDL_AddTimer(tickRate, ClientSend, NULL);
 	if (tickId == 0){
 		SDL_Log("SDL_AddTimer: %s", SDL_GetError());
 		exit(1);
 	}
 }
 
-void ClientDraw(WorldClient* worldClient){
+Character* clientDrawCharacterFind(WorldClient* worldClient){
 	//character find
 	Character* characterMe = NULL;
 	for(int i=0; i<worldClient->characterSLength; i++){
@@ -109,26 +110,12 @@ void ClientDraw(WorldClient* worldClient){
 
 		//render
 		SDL_RenderPresent(SDLRenderer);
-		return;
 	}
 
-	//offset
-	Position offset = (Position){
-		.y = -characterMe->position.y + windowHeight / 2,
-		.x = -characterMe->position.x + windowWidth / 2,
-	};
+	return characterMe;
+}
 
-	//clear & background
-	if(SDL_SetRenderDrawColor(SDLRenderer, 0, 255, 0, 255) < 0){
-		SDL_Log("ClientDraw: SDL_SetRenderDrawColor: %s", SDL_GetError());
-		exit(1);
-	}
-	if(SDL_RenderClear(SDLRenderer) < 0){
-		SDL_Log("ClientDraw: SDL_RenderClear: %s", SDL_GetError());
-		exit(1);
-	}
-
-	//exit
+void clientDrawExit(WorldClient* worldClient, Position offset){
 	if(worldClient->exit != NULL){
 		if (SDL_SetRenderDrawColor(SDLRenderer, 255, 255, 0, 255) < 0) {
 			SDL_Log("ClientDraw: SDL_SetRenderDrawColor: %s", SDL_GetError());
@@ -146,73 +133,53 @@ void ClientDraw(WorldClient* worldClient){
 		}
 	}
 
-	//object
-	for(int i=0; i<worldClient->objectSLength; i++){
-		int r,g,b;
+}
 
-		switch (worldClient->objectS[i].type){
-			case ObjectTypeBomb:
-				r = 0;
-				g = 0;
-				b = 0;
-				break;
-			case ObjectTypeWall:
-				r = 255;
-				g = 0;
-				b = 0;
-				break;
-			case ObjectTypeBombFire:
-				r = 255;
-				g = 165;
-				b = 0;
-				break;
-			case ObjectTypeBox:
-				r = 165;
-				g = 165;
-				b = 42;
-				break;
-			
-			default:
-				r = 155;
-				g = 155;
-				b = 155;
-				break;
-		}
-		if (SDL_SetRenderDrawColor(SDLRenderer, r, g, b, 255) < 0) {
-			SDL_Log("ClientDraw: SDL_SetRenderDrawColor: %s", SDL_GetError());
+void clientDrawObject(WorldClient* worldClient, Position offset){
+	for(int i=0; i<worldClient->objectSLength; i++){
+		Array* array = TextureSSObject[worldClient->objectS[i].type];
+
+		if(worldClient->objectS[i].animation.state > array->length){
+			SDL_Log("clientDrawObject: overindex");
 			exit(1);
 		}
+		SDL_Texture* texture = array->data[worldClient->objectS[i].animation.state];
 
-		if(SDL_RenderFillRect(SDLRenderer, &(SDL_Rect){
+		if(SDL_RenderCopy(SDLRenderer, texture, NULL, &(SDL_Rect){
 			.y = worldClient->objectS[i].position.y + offset.y,
 			.x = worldClient->objectS[i].position.x + offset.x,
 			.w = squaresize,
 			.h = squaresize,
 		}) < 0){
-			SDL_Log("ClientDraw: SDL_RenderFillRect: %s", SDL_GetError());
+			SDL_Log("clientDrawObject: SDL_RenderCopy: %s", SDL_GetError());
 			exit(1);
 		}
 	}
+}
 
-	//character
+void clientDrawCharacter(WorldClient* worldClient, Position offset){
 	for(int i=0; i<worldClient->characterSLength; i++){
-		if (SDL_SetRenderDrawColor(SDLRenderer, 0, 0, 255, 255) < 0) {
-			SDL_Log("ClientDraw: SDL_SetRenderDrawColor: %s", SDL_GetError());
+		Array* array = TextureSSCharacter[worldClient->characterS[i].type];
+
+		if(worldClient->characterS[i].animation.state > array->length){
+			SDL_Log("clientDrawCharacter: overindex");
 			exit(1);
 		}
+		SDL_Texture* texture = array->data[worldClient->characterS[i].animation.state];
 
-		if(SDL_RenderFillRect(SDLRenderer, &(SDL_Rect){
+		if(SDL_RenderCopy(SDLRenderer, texture, NULL, &(SDL_Rect){
 			.y = worldClient->characterS[i].position.y + offset.y,
 			.x = worldClient->characterS[i].position.x + offset.x,
 			.w = squaresize,
 			.h = squaresize,
 		}) < 0){
-			SDL_Log("ClientDraw: SDL_RenderFillRect: %s", SDL_GetError());
+			SDL_Log("clientDrawObject: SDL_RenderCopy: %s", SDL_GetError());
 			exit(1);
 		}
 	}
+}
 
-	//character name
+void clientDrawCharacterName(WorldClient* worldClient, Position offset){
 	for(int i=0; i<worldClient->characterSLength; i++){
 		/*if (stringRGBA(
 			SDLRenderer,
@@ -249,6 +216,42 @@ void ClientDraw(WorldClient* worldClient){
 		SDL_FreeSurface(surfaceMessage);
 		SDL_DestroyTexture(Message);*/
 	}
+}
+
+void ClientDraw(WorldClient* worldClient){
+	//dead
+	Character* characterMe = clientDrawCharacterFind(worldClient);
+	if(characterMe == NULL){
+		return;
+	}
+
+	//offset
+	Position offset = (Position){
+		.y = -characterMe->position.y + windowHeight / 2,
+		.x = -characterMe->position.x + windowWidth / 2,
+	};
+
+	//clear & background
+	if(SDL_SetRenderDrawColor(SDLRenderer, 0, 255, 0, 255) < 0){
+		SDL_Log("ClientDraw: SDL_SetRenderDrawColor: %s", SDL_GetError());
+		exit(1);
+	}
+	if(SDL_RenderClear(SDLRenderer) < 0){
+		SDL_Log("ClientDraw: SDL_RenderClear: %s", SDL_GetError());
+		exit(1);
+	}
+
+	//exit
+	clientDrawExit(worldClient, offset);
+
+	//object
+	clientDrawObject(worldClient, offset);
+
+	//character
+	clientDrawCharacter(worldClient, offset);
+
+	//character name
+	clientDrawCharacterName(worldClient, offset);
 
 	//render
 	SDL_RenderPresent(SDLRenderer);

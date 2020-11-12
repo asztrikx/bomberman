@@ -3,11 +3,11 @@
 
 #include "geometry.h"
 #include "character.h"
+#include "animation.h"
 
 typedef enum{
 	ObjectTypeBomb,
 	ObjectTypeBombFire,
-	ObjectTypeObstacle,
 	ObjectTypeWall,
 	ObjectTypeBox,
 } ObjectType;
@@ -19,7 +19,8 @@ typedef struct{
 	long long destroy; //-1 means never gets destroyed by server
 	Position velocity;
 	Character* owner; //NULL if server or disconnected player
-	bool bombOut; //only for ObjectTypeBomb signaling whether player has move out from bomb
+	bool bombOut; //only for ObjectTypeBomb signaling whether player has moved out from bomb
+	Animation animation;
 } Object;
 
 Object* ObjectNew();

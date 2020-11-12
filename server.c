@@ -2,6 +2,7 @@
 #include "server.h"
 #include <stdbool.h>
 #include "geometry.h"
+#include "SDL.h"
 #include "network.h"
 #include "type/object.h"
 #include "type/user/server.h"
@@ -14,14 +15,15 @@ static SDL_mutex* mutex;
 static List* userServerList;
 static WorldServer* worldServer;
 static long long tickCount = 0;
-static const unsigned int tickRate = 60u;
-static const long long tickSecond = tickRate; //tick count in one second
 static int tickId;
 
 UserServer* listFindByFunctionCharacterOwnerVariable;
 bool listFindByFunctionCharacterOwnerFunction(void* data){
 	return ((Character*)data)->owner == listFindByFunctionCharacterOwnerVariable;
 }
+
+//characterFind returns Character for UserServer
+//can not be used in parallel
 Character* characterFind(UserServer* userServer){
 	listFindByFunctionCharacterOwnerVariable = userServer;
 	ListItem* listItem = ListFindItemByFunction(worldServer->characterList, listFindByFunctionCharacterOwnerFunction);
@@ -254,6 +256,7 @@ void bombExplode(Object* object){
 	}
 }
 
+//clientDrawCharacterFind destroys all ObjectTypeBox and ObjectTypeCharacter if object is ObjectTypeBombFire
 void fireDestroy(Object* object){
 	if(object->type != ObjectTypeBombFire){
 		return;
@@ -324,7 +327,36 @@ Uint32 ServerTick(Uint32 interval, void *param){
 		fireDestroy(item->data);
 	}
 
-	//[R]state change
+	//animate
+	for (ListItem* item = worldServer->objectList->head; item != NULL; item = item->next){
+		Object* object = (Object*)item->data;
+
+		//delay
+		object->animation.stateDelayTick++;
+		if(object->animation.stateDelayTick <= object->animation.stateDelayTickEnd){
+			continue;
+		}
+		object->animation.stateDelayTick = 0;
+
+		//state next
+		object->animation.state++;
+		object->animation.state %= TextureSSObject[object->type]->length;
+	}
+	for (ListItem* item = worldServer->characterList->head; item != NULL; item = item->next){
+		Character* character = (Character*)item->data;
+
+		//delay
+		character->animation.stateDelayTick++;
+		if(character->animation.stateDelayTick <= character->animation.stateDelayTickEnd){
+			continue;
+		}
+		character->animation.stateDelayTick = 0;
+
+		//state next
+		character->animation.state++;
+		character->animation.state %= TextureSSCharacter[character->type]->length;
+	}
+	
 
 	//user notify
 	for(ListItem* item = userServerList->head; item != NULL; item = item->next){
@@ -366,7 +398,7 @@ void ServerStart(void){
 	networkServerStart();
 
 	//tick start: world calc, connected user update
-	tickId = SDL_AddTimer(1000u/tickRate, ServerTick, NULL);
+	tickId = SDL_AddTimer(tickRate, ServerTick, NULL);
 	if (tickId == 0){
 		SDL_Log("SDL_AddTimer: %s", SDL_GetError());
 		exit(1);

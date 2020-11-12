@@ -3,6 +3,7 @@
 
 #include "geometry.h"
 #include "user/server.h"
+#include "animation.h"
 
 typedef enum{
 	CharacterTypeUser,
@@ -16,6 +17,7 @@ typedef struct{
 	Position velocity;
 	int bombCount; //number of placed bombs for easier check
 	UserServer* owner; //NULL if server or disconnected player
+	Animation animation;
 } Character; //seeable by others
 
 Character* CharacterNew();

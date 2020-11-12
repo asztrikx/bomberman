@@ -18,7 +18,7 @@ typedef struct{
 } Ability;
 
 extern Ability AbilitySpeedExtra;
-void intfree(int* a);
+void intfree(void* a);
 void* Copy(void* data, size_t size);
 
 #endif

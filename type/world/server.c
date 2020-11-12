@@ -5,7 +5,6 @@
 #include "../object.h"
 
 //WorldServerNew creates a new WorldServer
-//[R] rename
 WorldServer* WorldServerNew(){
 	WorldServer* worldServer = (WorldServer*) malloc(sizeof(WorldServer));
 	worldServer->characterList = ListNew();

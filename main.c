@@ -6,12 +6,10 @@
 #include "time.h"
 
 int main(int argc, char *argv[]) {
-	//[R] create separate files for structs
 	srand(time(0)); //[R] better seed
 
 	//local
 	if(argc < 2){
-		//client
 		SDLInit();
 
 		ServerStart();
@@ -29,8 +27,7 @@ int main(int argc, char *argv[]) {
 		ClientStop();
 		ServerStop();
 		
-		//TTF_Quit();
-		SDL_Quit();
+		SDLDestroy();
 	} else if(strcmp(argv[1], "server") == 0){
 		ServerStart();
 
@@ -40,6 +37,8 @@ int main(int argc, char *argv[]) {
 
 		ServerStop();
 	} else if(strcmp(argv[1], "client") == 0){
+		SDLInit();
+
 		ClientStart();
 		ClientConnect();
 
@@ -52,6 +51,8 @@ int main(int argc, char *argv[]) {
 		}
 
 		ClientStop();
+
+		SDLDestroy();
 	}
 
 	return 0;

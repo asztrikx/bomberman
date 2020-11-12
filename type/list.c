@@ -31,7 +31,7 @@ void ListInsertItem(List** list, ListItem* listItem){
 
 //ListRemoveItem removed ListItem referenced from list
 //dataFree is called on ListItem->data if it is not NULL
-void ListRemoveItem(List** list, ListItem* listItem, void (*dataFree)()){
+void ListRemoveItem(List** list, ListItem* listItem, void (*dataFree)(void*)){
 	if(listItem->prev == NULL){ //first in list
 		(*list)->head = listItem->next;
 
@@ -56,15 +56,11 @@ void ListRemoveItem(List** list, ListItem* listItem, void (*dataFree)()){
 
 //ListFindItemByFunction returns first ListItem where func(ListItem->data) holds
 ListItem* ListFindItemByFunction(List* list, bool (*func)(void*)){
-	ListItem* listItemCurrent = list->head;
-	while(listItemCurrent != NULL){
-		if(func(listItemCurrent->data)){
-			return listItemCurrent;
+	for(ListItem* item = list->head; item != NULL; item = item->next){
+		if(func(item->data)){
+			return item;
 		}
-
-		listItemCurrent = listItemCurrent->next;
 	}
-
 	return NULL;
 }
 

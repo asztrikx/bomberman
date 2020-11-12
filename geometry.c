@@ -105,16 +105,12 @@ WorldServer* worldGenerate(int height, int width){
 			){
 				//[R] check collision
 				Object* object = ObjectNew();
-				object->created = -1;
-				object->destroy = -1;
 				object->position = (Position){
 						.y = i * squaresize,
 						.x = j * squaresize,
 					};
 				object->type = ObjectTypeWall;
-				object->velocity = (Position){0,0};
 				object->bombOut = true;
-				object->owner = NULL;
 				ListInsert(&(worldServer->objectList), object);
 			}
 		}
