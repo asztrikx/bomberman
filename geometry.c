@@ -150,7 +150,6 @@ int collisionFreeCountObjectGet(WorldServer* worldServer, Position position){
 Position spawnGet(WorldServer* worldServer){
 	Position positionCompressed;
 	Position position;
-	int collisionCountObject;
 	int collisionCountCharacter;
 	int collisionFreeCountObject;
 	do {

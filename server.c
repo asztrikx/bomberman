@@ -469,7 +469,7 @@ Uint32 serverTick(Uint32 interval, void *param){
 //ServerStart generates world, start accepting connections, starts ticking
 void ServerStart(void){
 	//world generate
-	worldServer = worldGenerate(17, 57, 0.8); //not critical section
+	worldServer = worldGenerate(17, 57, 0.4); //not critical section
 	userServerList = ListNew();
 
 	//mutex init
