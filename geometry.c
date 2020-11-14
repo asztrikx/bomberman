@@ -39,10 +39,13 @@ bool CollisionLineGet(Position from, Position to, Position obstacle){
 		if(to.y - from.y != 0){
 			current.y += (to.y - from.y) / abs(to.y - from.y);
 		}
+		if(CollisionPointGet(current, obstacle)){
+			return true;
+		}
+
 		if(to.x - from.x != 0){
 			current.x += (to.x - from.x) / abs(to.x - from.x);
 		}
-
 		if(CollisionPointGet(current, obstacle)){
 			return true;
 		}
