@@ -52,6 +52,7 @@ bool collisionLine(Position from, Position to, Position obstacle){
 
 //collisionObjectS return all collisions in line (from, to)
 //returned list is a reference list, which must be freed without deleting data
+//[R] rename to CollisionObjectSGet
 List* collisionObjectS(List* list, Position from, Position to){
 	List* listCollision = ListNew();
 
@@ -86,7 +87,7 @@ List* collisionCharacterS(List* list, Position from, Position to){
 
 //worldGenerate generates default map
 //free should be called
-WorldServer* worldGenerate(int height, int width){
+WorldServer* worldGenerate(int height, int width, double boxRatio){
 	if(height % 2 != 1 || width % 2 != 1){
 		SDL_Log("worldGenerate: World size is malformed");
 		exit(1);
@@ -103,12 +104,11 @@ WorldServer* worldGenerate(int height, int width){
 				i == height - 1 || j == width - 1 ||
 				(i % 2 == 0 && j % 2 == 0)
 			){
-				//[R] check collision
 				Object* object = ObjectNew();
 				object->position = (Position){
-						.y = i * squaresize,
-						.x = j * squaresize,
-					};
+					.y = i * squaresize,
+					.x = j * squaresize,
+				};
 				object->type = ObjectTypeWall;
 				object->bombOut = true;
 				ListInsert(&(worldServer->objectList), object);
@@ -126,30 +126,131 @@ WorldServer* worldGenerate(int height, int width){
 		SDL_Log("worldGenerate: map is too big");
 		exit(1);
 	}
-	for(int i=0; i<(width + 1) * (height + 1) * 0.2; i++){
-		int y = 0, x = 0;
-		while(
-			y == 0 || x == 0 ||
-			y == height - 1 || x == width - 1 ||
-			(y % 2 == 0 && x % 2 == 0)
-		){
-			y = rand() % height;
-			x = rand() % width;
-		}
+	int boxCount = boxRatio * collisionFreeCountObjectGet(worldServer, (Position){
+		.y = squaresize,
+		.x = squaresize,
+	});
+	for(int i=0; i<boxCount; i++){
+		//position
+		Position position;
+		int collisionCount;
+		do{
+			//random
+			position.y = (rand() % height) * squaresize;
+			position.x = (rand() % width) * squaresize;
+
+			//collision
+			List* collisionListObject = collisionObjectS(worldServer->objectList, position, position);
+			collisionCount = collisionListObject->length;
+			ListDelete(collisionListObject, NULL);
+		} while (collisionCount != 0);
 
 		Object* object = ObjectNew();
 		object->created = -1;
 		object->destroy = -1;
-		object->position = (Position){
-				.y = y * squaresize,
-				.x = x * squaresize,
-			};
+		object->position = position;
 		object->type = ObjectTypeBox;
-		object->velocity = (Position){0,0};
+		object->velocity = (Position){
+			.y = 0,
+			.x = 0
+		};
 		object->bombOut = true;
 		object->owner = NULL;
 		ListInsert(&(worldServer->objectList), object);
 	}
 
 	return worldServer;
+}
+
+bool** collisionFreeCountObjectGetMemory = NULL;
+int collisionFreeCountObjectGetRecursion(WorldServer* worldServer, Position positionCompress){
+	Position position;
+	position.y = positionCompress.y * squaresize;
+	position.x = positionCompress.x * squaresize;
+
+	//in calculation or already calculated
+	if(collisionFreeCountObjectGetMemory[positionCompress.y][positionCompress.x]){
+		return 0;
+	}
+
+	//because of map border there will be no overindexing
+	//mark invalid positions also to save collision recalculation
+	collisionFreeCountObjectGetMemory[positionCompress.y][positionCompress.x] = true;
+
+	//position is valid
+	List* collisionListObject = collisionObjectS(worldServer->objectList, position, position);
+	int collisionCount = collisionListObject->length;
+	ListDelete(collisionListObject, NULL);
+
+	if(collisionCount != 0){
+		return 0;
+	}
+
+	//neighbour positions
+	int collisionFreeCountObject = 1; //current position
+	int directionY[] = {1, -1, 0, 0};
+	int directionX[] = {0, 0, 1, -1};
+	for(int i=0; i < 4; i++){
+		Position positionCompressNew = (Position){
+			.y = positionCompress.y + directionY[i],
+			.x = positionCompress.x + directionX[i],
+		};
+		collisionFreeCountObject += collisionFreeCountObjectGetRecursion(worldServer, positionCompressNew);
+	}
+
+	return collisionFreeCountObject;
+}
+
+//collisionFreeCountObject return how many square sized object-free area is reachable from (position / squaresize)
+int collisionFreeCountObjectGet(WorldServer* worldServer, Position position){
+	//memory alloc
+	collisionFreeCountObjectGetMemory = (bool**) malloc(worldServer->height * sizeof(bool*));
+	collisionFreeCountObjectGetMemory[0] = (bool*) calloc(worldServer->height * worldServer->width, sizeof(bool));
+	for(int i=1; i<worldServer->height; i++){
+		collisionFreeCountObjectGetMemory[i] = collisionFreeCountObjectGetMemory[0] + i * worldServer->width;
+	}
+
+	//recursion
+	Position positionCompress;
+	positionCompress.y = position.y / squaresize;
+	positionCompress.x = position.x / squaresize;
+	int count = collisionFreeCountObjectGetRecursion(worldServer, positionCompress);
+
+	//memory free
+	free(collisionFreeCountObjectGetMemory[0]);
+	free(collisionFreeCountObjectGetMemory);
+
+	return count;
+}
+
+//spawnGet return a position where there's at least 3 free space reachable without action so player does not die instantly
+Position spawnGet(WorldServer* worldServer){
+	Position positionCompressed;
+	Position position;
+	int collisionCountObject;
+	int collisionCountCharacter;
+	int collisionFreeCountObject;
+	do {
+		//random position in world
+		//this could be a bit optimized but it's more error prone
+		positionCompressed.y = rand() % worldServer->height;
+		positionCompressed.x = rand() % worldServer->width;
+
+		//decompress
+		position.y = positionCompressed.y * squaresize;
+		position.x = positionCompressed.x * squaresize;
+
+		//collision check
+		List* collisionListCharacter = collisionCharacterS(worldServer->objectList, position, position);
+		collisionCountCharacter = collisionListCharacter->length;
+		ListDelete(collisionListCharacter, NULL);
+
+		//position valid
+		collisionFreeCountObject = collisionFreeCountObjectGet(worldServer, position);
+	} while (
+		collisionCountCharacter != 0 ||
+		collisionFreeCountObject <= 2
+	);
+
+	return position;
 }

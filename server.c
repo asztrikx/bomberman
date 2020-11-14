@@ -284,13 +284,8 @@ void fireDestroy(Object* object){
 	ListDelete(listCollisionCharacter, NULL);
 }
 
-//ServerTick calculates new frame, notifies users
-Uint32 ServerTick(Uint32 interval, void *param){
-	if(SDL_LockMutex(mutex) != 0){
-		SDL_Log("ServerTick: SDL_LockMutex: %s", SDL_GetError());
-		exit(1);
-	}
-
+//serverTickCalculate calculates new world state from current
+void serverTickCalculate(){
 	//destroy by server
 	//this should be calculated first as these objects should not exists in this tick
 	ListItem* listItemCurrent = worldServer->objectList->head;
@@ -356,9 +351,10 @@ Uint32 ServerTick(Uint32 interval, void *param){
 		character->animation.state++;
 		character->animation.state %= TextureSSCharacter[character->type]->length;
 	}
-	
+}
 
-	//user notify
+//serverTickSend sends new world to connected clients
+void serverTickSend(){
 	for(ListItem* item = userServerList->head; item != NULL; item = item->next){
 		Character* character = characterFind((UserServer*)item->data);
 
@@ -371,9 +367,21 @@ Uint32 ServerTick(Uint32 interval, void *param){
 			character->type = CharacterTypeUser;	
 		}
 	}
+}
+
+//serverTick calculates new frame, notifies users
+Uint32 serverTick(Uint32 interval, void *param){
+	if(SDL_LockMutex(mutex) != 0){
+		SDL_Log("serverTick: SDL_LockMutex: %s", SDL_GetError());
+		exit(1);
+	}
+	
+	serverTickCalculate();
+
+	serverTickSend();
 
 	if(SDL_UnlockMutex(mutex) < 0){
-		SDL_Log("ServerTick: mutex unlock: %s", SDL_GetError());
+		SDL_Log("serverTick: mutex unlock: %s", SDL_GetError());
 		exit(1);
 	}
 
@@ -384,7 +392,7 @@ Uint32 ServerTick(Uint32 interval, void *param){
 //ServerStart generates world, start accepting connections, starts ticking
 void ServerStart(void){
 	//world generate
-	worldServer = worldGenerate(17, 57); //not critical section
+	worldServer = worldGenerate(17, 57, 0.8); //not critical section
 	userServerList = ListNew();
 
 	//mutex init
@@ -398,7 +406,7 @@ void ServerStart(void){
 	networkServerStart();
 
 	//tick start: world calc, connected user update
-	tickId = SDL_AddTimer(tickRate, ServerTick, NULL);
+	tickId = SDL_AddTimer(tickRate, serverTick, NULL);
 	if (tickId == 0){
 		SDL_Log("SDL_AddTimer: %s", SDL_GetError());
 		exit(1);
@@ -477,7 +485,7 @@ void ServerStop(void){
 		exit(1);
 	}
 
-	networkServerStop(); //[R] should be a mutex in network otherwise a lock can be stuck
+	networkServerStop(); //[R] should be a mutex in network otherwise a lock can be stuck if real network is used
 
 	//free worldServer
 	WorldServerDelete(worldServer);
@@ -518,53 +526,16 @@ void ServerConnect(UserServer* userServerUnsafe){
 		free(auth);
 	}
 
-	//position random
-	//[R]
-	Position positionCompressed = (Position){
-		.y = 0,
-		.x = 0,
-	};
-	Position position = {
-		.y = 0,
-		.x = 0,
-	};
-	List* collisionListObject = collisionObjectS(worldServer->objectList, position, position);
-	List* collisionListCharacter = collisionCharacterS(worldServer->characterList, position, position);
-	while(
-		positionCompressed.y == 0 ||
-		positionCompressed.x == 0 ||
-		positionCompressed.y == worldServer->height - 1 ||
-		positionCompressed.x == worldServer->width - 1 ||
-		(
-			positionCompressed.y % 2 == 0 &&
-			positionCompressed.x % 2 == 0
-		) ||
-		collisionListObject->length != 0 ||
-		collisionListCharacter->length != 0
-	){
-		positionCompressed.y = rand() % worldServer->height;
-		positionCompressed.x = rand() % worldServer->width;
-
-		position.y = positionCompressed.y * squaresize;
-		position.x = positionCompressed.x * squaresize;
-
-		ListDelete(collisionListObject, NULL);
-		ListDelete(collisionListCharacter, NULL);
-		collisionListObject = collisionObjectS(worldServer->objectList, position, position);
-		collisionListCharacter = collisionCharacterS(worldServer->objectList, position, position);
-	}
-	ListDelete(collisionListObject, NULL);
-	ListDelete(collisionListCharacter, NULL);
-
-	//[R]clear area to have a playable spawn
+	//spawn
+	Position position = spawnGet(worldServer);
 
 	//character insert
 	Character* character = CharacterNew();
 	character->bombCount = 1;
 	character->owner = userServer;
 	character->position = (Position) {
-		position.y,
-		position.x
+		.y = position.y,
+		.x = position.x
 	};
 	character->type = CharacterTypeUser;
 	character->velocity = velocity;
