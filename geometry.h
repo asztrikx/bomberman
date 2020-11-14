@@ -5,11 +5,11 @@
 #include "type/list.h"
 #include "type/world/server.h"
 
-bool collisionPoint(Position position1, Position position2);
-bool collisionLine(Position from, Position to, Position obstacle);
-List* collisionObjectS(List* list, Position from, Position to);
-List* collisionCharacterS(List* list, Position from, Position to);
-Position spawnGet(WorldServer* worldServer);
-int collisionFreeCountObjectGet(WorldServer* worldServer, Position position);
+bool CollisionPointGet(Position position1, Position position2);
+bool CollisionLineGet(Position from, Position to, Position obstacle);
+List* CollisionObjectSGet(List* list, Position from, Position to);
+List* CollisionCharacterSGet(List* list, Position from, Position to);
+Position SpawnGet(WorldServer* worldServer);
+int CollisionFreeCountObjectGet(WorldServer* worldServer, Position position);
 
 #endif

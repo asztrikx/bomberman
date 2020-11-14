@@ -6,7 +6,7 @@
 #include "type/geometry.h"
 #include "type/object.h"
 
-bool collisionPoint(Position position1, Position position2){
+bool CollisionPointGet(Position position1, Position position2){
 	if(abs(position1.x - position2.x) >= squaresize){
 		return false;
 	}
@@ -16,7 +16,8 @@ bool collisionPoint(Position position1, Position position2){
 	return true;
 }
 
-bool collisionLine(Position from, Position to, Position obstacle){
+//CollisionLineGet tells whether there is collision with obstacle in discrete line (from, to)
+bool CollisionLineGet(Position from, Position to, Position obstacle){
 	//velocity is always has same abs value or one of them is zero so
 	//to - from will have the same property
 	int step = abs(to.y - from.y);
@@ -26,7 +27,7 @@ bool collisionLine(Position from, Position to, Position obstacle){
 
 	//stays in place
 	if(step == 0){
-		return collisionPoint(from, obstacle);
+		return CollisionPointGet(from, obstacle);
 	}
 
 	//step through each discrete value as there are scenarios where
@@ -42,7 +43,7 @@ bool collisionLine(Position from, Position to, Position obstacle){
 			current.x += (to.x - from.x) / abs(to.x - from.x);
 		}
 
-		if(collisionPoint(current, obstacle)){
+		if(CollisionPointGet(current, obstacle)){
 			return true;
 		}
 	}
@@ -50,14 +51,13 @@ bool collisionLine(Position from, Position to, Position obstacle){
 	return false;
 }
 
-//collisionObjectS return all collisions in line (from, to)
+//CollisionObjectSGet return all collisions in line (from, to)
 //returned list is a reference list, which must be freed without deleting data
-//[R] rename to CollisionObjectSGet
-List* collisionObjectS(List* list, Position from, Position to){
+List* CollisionObjectSGet(List* list, Position from, Position to){
 	List* listCollision = ListNew();
 
 	for(ListItem* item = list->head; item != NULL; item = item->next){
-		if(collisionLine(from, to, ((Object*)item->data)->position)){
+		if(CollisionLineGet(from, to, ((Object*)item->data)->position)){
 			ListItem* listItem = (ListItem*) malloc(sizeof(ListItem));
 			listItem->data = item->data;
 
@@ -68,13 +68,13 @@ List* collisionObjectS(List* list, Position from, Position to){
 	return listCollision;
 }
 
-//collisionCharacterS return all collisions in line (from, to)
+//CollisionCharacterSGet return all collisions in line (from, to)
 //returned list is a reference list, which must be freed without deleting data
-List* collisionCharacterS(List* list, Position from, Position to){
+List* CollisionCharacterSGet(List* list, Position from, Position to){
 	List* listCollision = ListNew();
 
 	for(ListItem* item = list->head; item != NULL; item = item->next){
-		if(collisionLine(from, to, ((Character*)item->data)->position)){
+		if(CollisionLineGet(from, to, ((Character*)item->data)->position)){
 			ListItem* listItem = (ListItem*) malloc(sizeof(ListItem));
 			listItem->data = item->data;
 
@@ -101,7 +101,7 @@ int collisionFreeCountObjectGetRecursion(WorldServer* worldServer, Position posi
 	collisionFreeCountObjectGetMemory[positionCompress.y][positionCompress.x] = true;
 
 	//position is valid
-	List* collisionListObject = collisionObjectS(worldServer->objectList, position, position);
+	List* collisionListObject = CollisionObjectSGet(worldServer->objectList, position, position);
 	int collisionCount = collisionListObject->length;
 	ListDelete(collisionListObject, NULL);
 
@@ -125,7 +125,7 @@ int collisionFreeCountObjectGetRecursion(WorldServer* worldServer, Position posi
 }
 
 //collisionFreeCountObject return how many square sized object-free area is reachable from (position / squaresize)
-int collisionFreeCountObjectGet(WorldServer* worldServer, Position position){
+int CollisionFreeCountObjectGet(WorldServer* worldServer, Position position){
 	//memory alloc
 	collisionFreeCountObjectGetMemory = (bool**) malloc(worldServer->height * sizeof(bool*));
 	collisionFreeCountObjectGetMemory[0] = (bool*) calloc(worldServer->height * worldServer->width, sizeof(bool));
@@ -146,8 +146,8 @@ int collisionFreeCountObjectGet(WorldServer* worldServer, Position position){
 	return count;
 }
 
-//spawnGet return a position where there's at least 3 free space reachable without action so player does not die instantly
-Position spawnGet(WorldServer* worldServer){
+//SpawnGet return a position where there's at least 3 free space reachable without action so player does not die instantly
+Position SpawnGet(WorldServer* worldServer){
 	Position positionCompressed;
 	Position position;
 	int collisionCountCharacter;
@@ -163,12 +163,12 @@ Position spawnGet(WorldServer* worldServer){
 		position.x = positionCompressed.x * squaresize;
 
 		//collision check
-		List* collisionListCharacter = collisionCharacterS(worldServer->objectList, position, position);
+		List* collisionListCharacter = CollisionCharacterSGet(worldServer->objectList, position, position);
 		collisionCountCharacter = collisionListCharacter->length;
 		ListDelete(collisionListCharacter, NULL);
 
 		//position valid
-		collisionFreeCountObject = collisionFreeCountObjectGet(worldServer, position);
+		collisionFreeCountObject = CollisionFreeCountObjectGet(worldServer, position);
 	} while (
 		collisionCountCharacter != 0 ||
 		collisionFreeCountObject <= 2

@@ -58,7 +58,7 @@ WorldServer* worldGenerate(int height, int width, double boxRatio){
 		SDL_Log("worldGenerate: map is too big");
 		exit(1);
 	}
-	int boxCount = boxRatio * collisionFreeCountObjectGet(worldServer, (Position){
+	int boxCount = boxRatio * CollisionFreeCountObjectGet(worldServer, (Position){
 		.y = squaresize,
 		.x = squaresize,
 	});
@@ -72,7 +72,7 @@ WorldServer* worldGenerate(int height, int width, double boxRatio){
 			position.x = (rand() % width) * squaresize;
 
 			//collision
-			List* collisionListObject = collisionObjectS(worldServer->objectList, position, position);
+			List* collisionListObject = CollisionObjectSGet(worldServer->objectList, position, position);
 			collisionCount = collisionListObject->length;
 			ListDelete(collisionListObject, NULL);
 		} while (collisionCount != 0);
@@ -137,8 +137,8 @@ void keyMovement(SDL_Keycode key, UserServer* userServer){
 	}
 
 	//collision
-	List* listCollisionObject = collisionObjectS(worldServer->objectList, character->position, positionNew);
-	List* listCollisionCharacter = collisionCharacterS(worldServer->characterList, character->position, positionNew);
+	List* listCollisionObject = CollisionObjectSGet(worldServer->objectList, character->position, positionNew);
+	List* listCollisionCharacter = CollisionCharacterSGet(worldServer->characterList, character->position, positionNew);
 
 	//[R] collision should not drop position new, just cut it &positionNew to functions
 
@@ -181,7 +181,7 @@ void keyMovement(SDL_Keycode key, UserServer* userServer){
 			//(it can be that it moved out from it in the past)
 			if(
 				((Object*)item->data)->owner == character &&
-				!collisionPoint(positionNew, ((Object*)item->data)->position
+				!CollisionPointGet(positionNew, ((Object*)item->data)->position
 			)){
 				((Object*)item->data)->bombOut = true;
 			}
@@ -220,8 +220,8 @@ void keyBomb(SDL_Keycode key, UserServer* userServer){
 	}
 
 	//collision
-	List* collisionObjectList = collisionObjectS(worldServer->objectList, positionNew, positionNew);
-	List* collisionCharacterList  = collisionCharacterS(worldServer->characterList, positionNew, positionNew);
+	List* collisionObjectList = CollisionObjectSGet(worldServer->objectList, positionNew, positionNew);
+	List* collisionCharacterList  = CollisionCharacterSGet(worldServer->characterList, positionNew, positionNew);
 
 	if (
 		collisionCharacterList->length != 0 && (
@@ -340,7 +340,7 @@ void fireDestroy(Object* object){
 	}
 
 	//object collision
-	List* listCollisionObject = collisionObjectS(worldServer->objectList, object->position, object->position);
+	List* listCollisionObject = CollisionObjectSGet(worldServer->objectList, object->position, object->position);
 	for(ListItem* item = listCollisionObject->head; item != NULL; item = item->next){
 		if(((Object*)item->data)->type == ObjectTypeBox){
 			ListItem* listItem = ListFindItemByPointer(worldServer->objectList, item->data);
@@ -352,7 +352,7 @@ void fireDestroy(Object* object){
 	ListDelete(listCollisionObject, NULL);
 
 	//character collision
-	List* listCollisionCharacter = collisionCharacterS(worldServer->characterList, object->position, object->position);
+	List* listCollisionCharacter = CollisionCharacterSGet(worldServer->characterList, object->position, object->position);
 	for(ListItem* item = listCollisionCharacter->head; item != NULL; item = item->next){
 		//remove item
 		ListItem* listItem = ListFindItemByPointer(worldServer->characterList, item->data);
@@ -604,7 +604,7 @@ void ServerConnect(UserServer* userServerUnsafe){
 	}
 
 	//spawn
-	Position position = spawnGet(worldServer);
+	Position position = SpawnGet(worldServer);
 
 	//character insert
 	Character* character = CharacterNew();
