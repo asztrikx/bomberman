@@ -72,9 +72,9 @@ WorldServer* worldGenerate(int height, int width, double boxRatio){
 			position.x = (rand() % width) * squaresize;
 
 			//collision
-			List* collisionListObject = CollisionObjectSGet(worldServer->objectList, position, position);
-			collisionCount = collisionListObject->length;
-			ListDelete(collisionListObject, NULL);
+			List* collisionObjectS = CollisionObjectSGet(worldServer->objectList, position, position);
+			collisionCount = collisionObjectS->length;
+			ListDelete(collisionObjectS, NULL);
 		} while (collisionCount != 0);
 
 		Object* object = ObjectNew();
@@ -137,21 +137,21 @@ void keyMovement(SDL_Keycode key, UserServer* userServer){
 	}
 
 	//collision
-	List* listCollisionObject = CollisionObjectSGet(worldServer->objectList, character->position, positionNew);
-	List* listCollisionCharacter = CollisionCharacterSGet(worldServer->characterList, character->position, positionNew);
+	List* collisionObjectS = CollisionObjectSGet(worldServer->objectList, character->position, positionNew);
+	List* collisionCharacterS = CollisionCharacterSGet(worldServer->characterList, character->position, positionNew);
 
 	//[R] collision should not drop position new, just cut it &positionNew to functions
 
 	if (
-		listCollisionCharacter->length != 1 ||
-		listCollisionCharacter->head->data != character
+		collisionCharacterS->length != 1 ||
+		collisionCharacterS->head->data != character
 	){
-		ListDelete(listCollisionObject, NULL);
-		ListDelete(listCollisionCharacter, NULL);
+		ListDelete(collisionObjectS, NULL);
+		ListDelete(collisionCharacterS, NULL);
 		return;
 	}
-	if(listCollisionObject->length != 0){
-		for(ListItem* item = listCollisionObject->head; item != NULL; item = item->next){
+	if(collisionObjectS->length != 0){
+		for(ListItem* item = collisionObjectS->head; item != NULL; item = item->next){
 			//player can be inside fire (it will die in this exact tick)
 			if(((Object*)item->data)->type == ObjectTypeBombFire){
 				continue;
@@ -168,15 +168,15 @@ void keyMovement(SDL_Keycode key, UserServer* userServer){
 				continue;
 			}
 
-			ListDelete(listCollisionObject, NULL);
-			ListDelete(listCollisionCharacter, NULL);
+			ListDelete(collisionObjectS, NULL);
+			ListDelete(collisionCharacterS, NULL);
 			return;
 		}
 	}
 
 	//moved from an area with its own bombs
-	if(listCollisionObject->length != 0){
-		for(ListItem* item = listCollisionObject->head; item != NULL; item = item->next){
+	if(collisionObjectS->length != 0){
+		for(ListItem* item = collisionObjectS->head; item != NULL; item = item->next){
 			//bombs which to player can not move back
 			//(it can be that it moved out from it in the past)
 			if(
@@ -190,8 +190,8 @@ void keyMovement(SDL_Keycode key, UserServer* userServer){
 	
 	character->position = positionNew;
 
-	ListDelete(listCollisionObject, NULL);
-	ListDelete(listCollisionCharacter, NULL);
+	ListDelete(collisionObjectS, NULL);
+	ListDelete(collisionCharacterS, NULL);
 }
 
 //keyBomb calculates bomb position based on keyItem.key
@@ -220,26 +220,26 @@ void keyBomb(SDL_Keycode key, UserServer* userServer){
 	}
 
 	//collision
-	List* collisionObjectList = CollisionObjectSGet(worldServer->objectList, positionNew, positionNew);
-	List* collisionCharacterList  = CollisionCharacterSGet(worldServer->characterList, positionNew, positionNew);
+	List* collisionObjectS = CollisionObjectSGet(worldServer->objectList, positionNew, positionNew);
+	List* collisionCharacterS = CollisionCharacterSGet(worldServer->characterList, positionNew, positionNew);
 
 	if (
-		collisionCharacterList->length != 0 && (
-			collisionCharacterList->length != 1 ||
-			collisionCharacterList->head->data != character
+		collisionCharacterS->length != 0 && (
+			collisionCharacterS->length != 1 ||
+			collisionCharacterS->head->data != character
 		)
 	){
-		ListDelete(collisionObjectList, NULL);
-		ListDelete(collisionCharacterList, NULL);
+		ListDelete(collisionObjectS, NULL);
+		ListDelete(collisionCharacterS, NULL);
 		return;
 	}
-	if(collisionObjectList->length != 0){
-		ListDelete(collisionObjectList, NULL);
-		ListDelete(collisionCharacterList, NULL);
+	if(collisionObjectS->length != 0){
+		ListDelete(collisionObjectS, NULL);
+		ListDelete(collisionCharacterS, NULL);
 		return;
 	}
-	ListDelete(collisionObjectList, NULL);
-	ListDelete(collisionCharacterList, NULL);
+	ListDelete(collisionObjectS, NULL);
+	ListDelete(collisionCharacterS, NULL);
 
 	//bomb insert
 	Object* object = ObjectNew();
@@ -340,8 +340,8 @@ void fireDestroy(Object* object){
 	}
 
 	//object collision
-	List* listCollisionObject = CollisionObjectSGet(worldServer->objectList, object->position, object->position);
-	for(ListItem* item = listCollisionObject->head; item != NULL; item = item->next){
+	List* collisionObjectS = CollisionObjectSGet(worldServer->objectList, object->position, object->position);
+	for(ListItem* item = collisionObjectS->head; item != NULL; item = item->next){
 		if(((Object*)item->data)->type == ObjectTypeBox){
 			ListItem* listItem = ListFindItemByPointer(worldServer->objectList, item->data);
 			ListRemoveItem(&(worldServer->objectList), listItem, ObjectDelete);
@@ -349,16 +349,16 @@ void fireDestroy(Object* object){
 			//bombExplode(objectItemCurrent->object); [R]
 		}
 	}
-	ListDelete(listCollisionObject, NULL);
+	ListDelete(collisionObjectS, NULL);
 
 	//character collision
-	List* listCollisionCharacter = CollisionCharacterSGet(worldServer->characterList, object->position, object->position);
-	for(ListItem* item = listCollisionCharacter->head; item != NULL; item = item->next){
+	List* collisionCharacterS = CollisionCharacterSGet(worldServer->characterList, object->position, object->position);
+	for(ListItem* item = collisionCharacterS->head; item != NULL; item = item->next){
 		//remove item
 		ListItem* listItem = ListFindItemByPointer(worldServer->characterList, item->data);
 		ListRemoveItem(&(worldServer->characterList), listItem, CharacterDelete);
 	}
-	ListDelete(listCollisionCharacter, NULL);
+	ListDelete(collisionCharacterS, NULL);
 }
 
 //serverTickCalculate calculates new world state from current
