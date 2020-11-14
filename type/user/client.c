@@ -1,7 +1,6 @@
 #include "../../debugmalloc.h"
 #include "client.h"
 #include <stdlib.h>
-#include "../../state.h"
 #include "../int.h"
 
 //UserClientNew creates a new UserClient

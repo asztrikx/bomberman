@@ -4,8 +4,6 @@
 #include <SDL2/SDL.h>
 #include <stdbool.h>
 
-//[R] delete this
-
 //Ability
 typedef struct{
 	int speedExtra;

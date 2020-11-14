@@ -14,7 +14,6 @@
 #include "type/int.h"
 #include "config.h"
 #include "network.h"
-#include "state.h"
 
 static SDL_mutex* mutex;
 static UserClient* userClient;
