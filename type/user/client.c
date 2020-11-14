@@ -2,6 +2,7 @@
 #include "client.h"
 #include <stdlib.h>
 #include "../../state.h"
+#include "../int.h"
 
 //UserClientNew creates a new UserClient
 UserClient* UserClientNew(){
@@ -18,7 +19,7 @@ UserClient* UserClientNew(){
 void UserClientDelete(UserClient* userClient){
 	//ListDelete(userClient->ablityList, );
 	free(userClient->auth);
-	ListDelete(userClient->keyList, intfree);
+	ListDelete(userClient->keyList, IntDelete);
 	free(userClient->name);
 	free(userClient);
 }

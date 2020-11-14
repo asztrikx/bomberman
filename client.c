@@ -11,6 +11,7 @@
 #include "type/geometry.h"
 #include "type/array.h"
 #include "type/animation.h"
+#include "type/int.h"
 #include "config.h"
 #include "network.h"
 #include "state.h"
@@ -57,14 +58,16 @@ void ClientEventKey(SDL_Event sdl_event){
 
 		//key in list, remove
 		if(sdl_event.type == SDL_KEYUP){
-			ListRemoveItem(&(userClient->keyList), item, intfree);
+			ListRemoveItem(&(userClient->keyList), item, IntDelete);
 			break;
 		}
 	}
 
 	//key not in list, add
 	if(sdl_event.type == SDL_KEYDOWN && !in){
-		ListInsert(&(userClient->keyList), Copy(&sdl_event.key.keysym.sym, sizeof(SDL_Keycode)));
+		int* key = IntNew();
+		*key = sdl_event.key.keysym.sym;
+		ListInsert(&(userClient->keyList), key);
 	}
 
 	if(SDL_UnlockMutex(mutex) < 0){

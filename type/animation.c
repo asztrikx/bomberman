@@ -1,6 +1,7 @@
 #include "../debugmalloc.h"
 #include "animation.h"
 
+//AnimationNew creates a new Animation
 Animation AnimationNew(void){
 	Animation animation;
 	animation.state = 0;
