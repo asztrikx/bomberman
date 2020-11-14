@@ -10,7 +10,7 @@ Character* CharacterNew(){
 		.stateDelayTick = 0,
 		.stateDelayTickEnd = 0,
 	};
-	//[R] add all
+	character->owner = NULL;
 
 	return character;
 }
