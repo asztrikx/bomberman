@@ -13,19 +13,22 @@
 //mutex handles all global variable which is modified in critical sections
 static SDL_mutex* mutex;
 static List* userServerList;
-static WorldServer* worldServer;
+static WorldServer* worldServer = NULL;
 static long long tickCount = 0;
 static int tickId;
 
 //worldGenerate generates default map
 //free should be called
-WorldServer* worldGenerate(int height, int width, double boxRatio){
+void worldGenerate(int height, int width, double boxRatio){
 	if(height % 2 != 1 || width % 2 != 1){
 		SDL_Log("worldGenerate: World size is malformed");
 		exit(1);
 	}
 
-	WorldServer* worldServer = WorldServerNew();
+	if(worldServer != NULL){
+		WorldServerDelete(worldServer);
+	}
+	worldServer = WorldServerNew();
 	worldServer->height = height;
 	worldServer->width = width;
 	
@@ -93,8 +96,6 @@ WorldServer* worldGenerate(int height, int width, double boxRatio){
 	}
 
 	//enemy generate randomly
-
-	return worldServer;
 }
 
 UserServer* listFindByFunctionCharacterOwnerVariable;
