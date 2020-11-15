@@ -5,8 +5,10 @@
 #include "config.h"
 #include "type/geometry.h"
 #include "type/object.h"
+#include "type/character.h"
 
-bool CollisionPointGet(Position position1, Position position2){
+//CollisionPoint tells whether there's a collision between objects at positions
+bool CollisionPoint(Position position1, Position position2){
 	if(abs(position1.x - position2.x) >= squaresize){
 		return false;
 	}
@@ -16,76 +18,134 @@ bool CollisionPointGet(Position position1, Position position2){
 	return true;
 }
 
-//CollisionLineGet tells whether there is collision with obstacle in discrete line (from, to)
-bool CollisionLineGet(Position from, Position to, Position obstacle){
-	//velocity is always has same abs value or one of them is zero so
-	//to - from will have the same property
+//CollisionPointAllObjectGet tells whether there's a collision between this and any Object
+//if collisionDecideObjectFunction is NULL then it's treated as always true
+List* CollisionPointAllObjectGet(List* objectS, Position position, void* this, CollisionDecideObjectFunction collisionDecideObjectFunction){
+	List* listCollision = ListNew();
+
+	for(ListItem* item = objectS->head; item != NULL; item = item->next){
+		if(item->data == this){
+			continue;
+		}
+
+		if(!CollisionPoint(position, ((Object*)item->data)->position)){
+			continue;
+		}
+
+		if(
+			collisionDecideObjectFunction != NULL &&
+			!collisionDecideObjectFunction(this, item->data)
+		){
+			continue;
+		}
+
+		ListItem* listItem = (ListItem*) malloc(sizeof(ListItem));
+		listItem->data = item->data;
+
+		ListInsertItem(&listCollision, listItem);
+	}
+
+	return listCollision;
+}
+
+//CollisionPointAllCharacterGet tells whether there's a collision between this and any Character
+//if collisionDecideCharacterFunction is NULL then it's treated as always true
+List* CollisionPointAllCharacterGet(List* characterS, Position position, void* this, CollisionDecideCharacterFunction collisionDecideCharacterFunction){
+	List* listCollision = ListNew();
+
+	for(ListItem* item = characterS->head; item != NULL; item = item->next){
+		if(item->data == this){
+			continue;
+		}
+
+		if(!CollisionPoint(position, ((Character*)item->data)->position)){
+			continue;
+		}
+
+		if(
+			collisionDecideCharacterFunction != NULL &&
+			!collisionDecideCharacterFunction(this, item->data)
+		){
+			continue;
+		}
+
+		ListItem* listItem = (ListItem*) malloc(sizeof(ListItem));
+		listItem->data = item->data;
+
+		ListInsertItem(&listCollision, listItem);
+	}
+
+	return listCollision;
+}
+
+//CollisionLinePositionGet tells whether there is collision with obstacle in discrete line (from, to)
+//from must not be equal to to
+//we can be NULL
+Position CollisionLinePositionGet(
+	WorldServer* worldServer,
+	Position from,
+	Position to,
+	void* we,
+	CollisionDecideObjectFunction collisionDecideObjectFunction,
+	CollisionDecideCharacterFunction collisionDecideCharacterFunction
+){
+	//position difference in abs is always same for y and x coordinate if none of them is zero
 	int step = abs(to.y - from.y);
 	if (step == 0){
 		step = abs(to.x - from.x);
 	}
+	Position current = from;
 
 	//stays in place
 	if(step == 0){
-		return CollisionPointGet(from, obstacle);
+		return from;
 	}
 
-	//step through each discrete value as there are scenarios where
+	//walk by discretely with unit vector as there are scenarios where
 	//the collision would misbehave if we would only check the arrival position
 	//eg: too fast speed would make it able to cross walls
 	//eg: squaresize pixel wide diagonal is crossable this way
-	Position current = from;
+	Position unit = (Position){
+		.y = 0,
+		.x = 0,
+	};
+	if(to.y - from.y != 0){
+		unit.y = (to.y - from.y) / abs(to.y - from.y);
+	}
+	if(to.x - from.x != 0){
+		unit.x = (to.x - from.x) / abs(to.x - from.x);
+	}
 	for(int i=0; i<step; i++){
-		if(to.y - from.y != 0){
-			current.y += (to.y - from.y) / abs(to.y - from.y);
-		}
-		if(CollisionPointGet(current, obstacle)){
-			return true;
-		}
+		//step y
+		current.y += unit.y;
 
-		if(to.x - from.x != 0){
-			current.x += (to.x - from.x) / abs(to.x - from.x);
+		List* collisionPointAllObject = CollisionPointAllObjectGet(worldServer->objectList, current, we, collisionDecideObjectFunction);
+		List* collisionPointAllCharacter = CollisionPointAllCharacterGet(worldServer->characterList, current, we, collisionDecideCharacterFunction);
+		if(
+			collisionPointAllObject->length != 0 ||
+			collisionPointAllCharacter->length != 0
+		){
+			current.y -= unit.y;
 		}
-		if(CollisionPointGet(current, obstacle)){
-			return true;
+		ListDelete(collisionPointAllObject, NULL);
+		ListDelete(collisionPointAllCharacter, NULL);
+
+		//step x
+		current.x += unit.x;
+
+		collisionPointAllObject = CollisionPointAllObjectGet(worldServer->objectList, current, we, collisionDecideObjectFunction);
+		collisionPointAllCharacter = CollisionPointAllCharacterGet(worldServer->characterList, current, we, collisionDecideCharacterFunction);
+		if(
+			collisionPointAllObject->length != 0 ||
+			collisionPointAllCharacter->length != 0
+		){
+			current.x -= unit.x;
 		}
+		ListDelete(collisionPointAllObject, NULL);
+		ListDelete(collisionPointAllCharacter, NULL);
 	}
 
-	return false;
-}
-
-//CollisionObjectSGet returns all collisions in line (from, to)
-//returned list is a reference list, which must be freed without deleting data
-List* CollisionObjectSGet(List* list, Position from, Position to){
-	List* listCollision = ListNew();
-
-	for(ListItem* item = list->head; item != NULL; item = item->next){
-		if(CollisionLineGet(from, to, ((Object*)item->data)->position)){
-			ListItem* listItem = (ListItem*) malloc(sizeof(ListItem));
-			listItem->data = item->data;
-
-			ListInsertItem(&listCollision, listItem);
-		}
-	}
-	
-	return listCollision;
-}
-
-//CollisionCharacterSGet returns all collisions in line (from, to)
-//returned list is a reference list, which must be freed without deleting data
-List* CollisionCharacterSGet(List* list, Position from, Position to){
-	List* listCollision = ListNew();
-
-	for(ListItem* item = list->head; item != NULL; item = item->next){
-		if(CollisionLineGet(from, to, ((Character*)item->data)->position)){
-			ListItem* listItem = (ListItem*) malloc(sizeof(ListItem));
-			listItem->data = item->data;
-
-			ListInsertItem(&listCollision, listItem);
-		}
-	}
-	
-	return listCollision;
+	return current;
 }
 
 bool** collisionFreeCountObjectGetMemory;
@@ -104,7 +164,7 @@ int collisionFreeCountObjectGetRecursion(WorldServer* worldServer, Position posi
 	collisionFreeCountObjectGetMemory[positionCompress.y][positionCompress.x] = true;
 
 	//position is valid
-	List* collisionListObject = CollisionObjectSGet(worldServer->objectList, position, position);
+	List* collisionListObject = CollisionPointAllObjectGet(worldServer->objectList, position, NULL, NULL);
 	int collisionCount = collisionListObject->length;
 	ListDelete(collisionListObject, NULL);
 
@@ -151,6 +211,18 @@ int CollisionFreeCountObjectGet(WorldServer* worldServer, Position position){
 
 //SpawnGet return a position where there's at least 3 free space reachable without action so player does not die instantly
 Position SpawnGet(WorldServer* worldServer, int collisionFreeCountObjectMin){
+	//random max check
+	if(
+		RAND_MAX != INT32_MAX && (
+			RAND_MAX + 1 < worldServer->height ||
+			RAND_MAX + 1 < worldServer->width
+		)
+	){
+		SDL_Log("worldGenerate: map is too big");
+		exit(1);
+	}
+
+	//position find
 	Position positionCompressed;
 	Position position;
 	int collisionCountCharacter;
@@ -166,7 +238,7 @@ Position SpawnGet(WorldServer* worldServer, int collisionFreeCountObjectMin){
 		position.x = positionCompressed.x * squaresize;
 
 		//collision check
-		List* collisionListCharacter = CollisionCharacterSGet(worldServer->objectList, position, position);
+		List* collisionListCharacter = CollisionPointAllCharacterGet(worldServer->characterList, position, NULL, NULL);
 		collisionCountCharacter = collisionListCharacter->length;
 		ListDelete(collisionListCharacter, NULL);
 

@@ -102,6 +102,38 @@ Character* characterFind(UserServer* userServer){
 	return listItem->data;
 }
 
+bool keyMovementCollisionDetectObject(void* this, Object *that){
+	//player can be inside fire (it will die in this exact tick)
+	if(that->type == ObjectTypeBombFire){
+		return false;
+	}
+
+	//player can be inside bomb
+	//it can be inside two bomb
+	//eg: inside firstly placed one and just placed one into neighbourgh position
+	if(
+		that->type == ObjectTypeBomb &&
+		that->owner == (Character*)this &&
+		that->bombOut
+	){
+		return false;
+	}
+
+	return true;
+}
+
+bool keyMovementCollisionDetectCharacter(void* this, Character *that){
+	//CharacterTypeUser is solid for CharacterTypeUser
+	//CharacterTypeEnemy is not solid for CharacterTypeUser
+	//vice versa with CharacterTypeEnemy
+	//so only same type character is solid
+	if(that->type != ((Character*)this)->type){
+		return false;
+	}
+
+	return true;
+}
+
 //keyMovement calculates user position based on keyItem.key
 //userServer must have a character
 void keyMovement(Character* character){
@@ -120,77 +152,28 @@ void keyMovement(Character* character){
 	}
 
 	//collision
-	List* collisionObjectS = CollisionObjectSGet(worldServer->objectList, character->position, positionNew);
-	List* collisionCharacterS = CollisionCharacterSGet(worldServer->characterList, character->position, positionNew);
-
-	//[R] collision should not drop position new, just cut it &positionNew to functions
-
-	if(collisionCharacterS->length != 1){
-		//CharacterTypeUser is solid for CharacterTypeUser
-		//CharacterTypeEnemy is not solid for CharacterTypeUser
-		//vice versa with CharacterTypeEnemy
-		//so only same type character is solid
-
-		bool characterTypeSameExist = false;
-		for(ListItem* item = collisionCharacterS->head; item != NULL; item = item->next){
-			if(item->data == character){
-				continue;
-			}
-
-			if(((Character*)item->data)->type == character->type){
-				characterTypeSameExist = true;
-				break;
-			}
-		}
-
-		if(characterTypeSameExist){
-			ListDelete(collisionObjectS, NULL);
-			ListDelete(collisionCharacterS, NULL);
-			return;
-		}
-	}
-	if(collisionObjectS->length != 0){
-		for(ListItem* item = collisionObjectS->head; item != NULL; item = item->next){
-			//player can be inside fire (it will die in this exact tick)
-			if(((Object*)item->data)->type == ObjectTypeBombFire){
-				continue;
-			}
-
-			//player can be inside bomb
-			//it can be inside two bomb
-			//eg: inside firstly placed one and just placed one into neighbourgh position
-			if(
-				((Object*)item->data)->type == ObjectTypeBomb &&
-				((Object*)item->data)->owner == character &&
-				!((Object*)item->data)->bombOut
-			){
-				continue;
-			}
-
-			ListDelete(collisionObjectS, NULL);
-			ListDelete(collisionCharacterS, NULL);
-			return;
-		}
-	}
+	character->position = CollisionLinePositionGet(
+		worldServer,
+		character->position,
+		positionNew,
+		character,
+		keyMovementCollisionDetectObject,
+		keyMovementCollisionDetectCharacter
+	);
 
 	//moved from an area with its own bombs
-	if(collisionObjectS->length != 0){
+	/*[R]if(collisionObjectS->length != 0){
 		for(ListItem* item = collisionObjectS->head; item != NULL; item = item->next){
 			//bombs which to player can not move back
 			//(it can be that it moved out from it in the past)
 			if(
 				((Object*)item->data)->owner == character &&
-				!CollisionPointGet(positionNew, ((Object*)item->data)->position
+				!CollisionPoint(positionNew, ((Object*)item->data)->position
 			)){
 				((Object*)item->data)->bombOut = true;
 			}
 		}
-	}
-	
-	character->position = positionNew;
-
-	ListDelete(collisionObjectS, NULL);
-	ListDelete(collisionCharacterS, NULL);
+	}*/
 }
 
 //keyBomb calculates bomb position based on keyItem.key
@@ -217,24 +200,8 @@ void keyBomb(Character* character){
 	}
 
 	//collision
-	List* collisionObjectS = CollisionObjectSGet(worldServer->objectList, positionNew, positionNew);
-	List* collisionCharacterS = CollisionCharacterSGet(worldServer->characterList, positionNew, positionNew);
-
-	if (
-		collisionCharacterS->length != 0 && (
-			collisionCharacterS->length != 1 ||
-			collisionCharacterS->head->data != character
-		)
-	){
-		ListDelete(collisionObjectS, NULL);
-		ListDelete(collisionCharacterS, NULL);
-		return;
-	}
-	if(collisionObjectS->length != 0){
-		ListDelete(collisionObjectS, NULL);
-		ListDelete(collisionCharacterS, NULL);
-		return;
-	}
+	List* collisionObjectS = CollisionPointAllObjectGet(worldServer->objectList, positionNew, NULL, NULL);
+	List* collisionCharacterS = CollisionPointAllCharacterGet(worldServer->characterList, positionNew, character, NULL);
 	ListDelete(collisionObjectS, NULL);
 	ListDelete(collisionCharacterS, NULL);
 
@@ -337,7 +304,7 @@ void fireDestroy(Object* object){
 	}
 
 	//object collision
-	List* collisionObjectS = CollisionObjectSGet(worldServer->objectList, object->position, object->position);
+	List* collisionObjectS = CollisionPointAllObjectGet(worldServer->objectList, object->position, NULL, NULL);
 	for(ListItem* item = collisionObjectS->head; item != NULL; item = item->next){
 		if(((Object*)item->data)->type == ObjectTypeBox){
 			ListItem* listItem = ListFindItemByPointer(worldServer->objectList, item->data);
@@ -349,7 +316,7 @@ void fireDestroy(Object* object){
 	ListDelete(collisionObjectS, NULL);
 
 	//character collision
-	List* collisionCharacterS = CollisionCharacterSGet(worldServer->characterList, object->position, object->position);
+	List* collisionCharacterS = CollisionPointAllCharacterGet(worldServer->characterList, object->position, NULL, NULL);
 	for(ListItem* item = collisionCharacterS->head; item != NULL; item = item->next){
 		//remove item
 		ListItem* listItem = ListFindItemByPointer(worldServer->characterList, item->data);
