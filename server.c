@@ -20,7 +20,7 @@ static int tickId;
 
 //worldGenerate generates default map
 //free should be called
-void worldGenerate(int height, int width, double boxRatio, double enemyRatio){
+void worldGenerate(int height, int width){
 	if(height % 2 != 1 || width % 2 != 1){
 		SDL_Log("worldGenerate: World size is malformed");
 		exit(1);
@@ -114,7 +114,7 @@ bool keyMovementCollisionDetectObject(void* this, Object *that){
 	if(
 		that->type == ObjectTypeBomb &&
 		that->owner == (Character*)this &&
-		that->bombOut
+		!that->bombOut
 	){
 		return false;
 	}
@@ -161,19 +161,19 @@ void keyMovement(Character* character){
 		keyMovementCollisionDetectCharacter
 	);
 
-	//moved from an area with its own bombs
-	/*[R]if(collisionObjectS->length != 0){
-		for(ListItem* item = collisionObjectS->head; item != NULL; item = item->next){
-			//bombs which to player can not move back
-			//(it can be that it moved out from it in the past)
-			if(
-				((Object*)item->data)->owner == character &&
-				!CollisionPoint(positionNew, ((Object*)item->data)->position
-			)){
-				((Object*)item->data)->bombOut = true;
-			}
+	//moved out from a bomb with !bombOut
+	//in one move it is not possible that it moved out from bomb then moved back again
+	for(ListItem* item = worldServer->objectList->head; item != NULL; item = item->next){
+		Object* object = (Object*)item->data;
+		if(
+			object->type == ObjectTypeBomb &&
+			object->owner == character &&
+			!object->bombOut &&
+			!CollisionPoint(character->position, object->position)
+		){
+			object->bombOut = true;
 		}
-	}*/
+	}
 }
 
 //keyBomb calculates bomb position based on keyItem.key
@@ -426,7 +426,7 @@ Uint32 serverTick(Uint32 interval, void *param){
 //ServerStart generates world, start accepting connections, starts ticking
 void ServerStart(void){
 	//world generate
-	worldGenerate(17, 57, 0.4, 0.2); //not critical section
+	worldGenerate(17, 57); //not critical section
 	userServerList = ListNew();
 
 	//mutex init
