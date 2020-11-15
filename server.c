@@ -8,6 +8,7 @@
 #include "type/user/server.h"
 #include "type/world/server.h"
 #include "type/character.h"
+#include "type/key.h"
 #include "config.h"
 
 //mutex handles all global variable which is modified in critical sections
@@ -19,7 +20,7 @@ static int tickId;
 
 //worldGenerate generates default map
 //free should be called
-void worldGenerate(int height, int width, double boxRatio){
+void worldGenerate(int height, int width, double boxRatio, double enemyRatio){
 	if(height % 2 != 1 || width % 2 != 1){
 		SDL_Log("worldGenerate: World size is malformed");
 		exit(1);
@@ -51,40 +52,18 @@ void worldGenerate(int height, int width, double boxRatio){
 			}
 		}
 	}
-	
-	//box generate randomly
-	if(
-		RAND_MAX != INT32_MAX && (
-			RAND_MAX + 1 < height ||
-			RAND_MAX + 1 < width
-		)
-	){
-		SDL_Log("worldGenerate: map is too big");
-		exit(1);
-	}
-	int boxCount = boxRatio * CollisionFreeCountObjectGet(worldServer, (Position){
+
+	int collisionFreeCountObject = CollisionFreeCountObjectGet(worldServer, (Position){
 		.y = squaresize,
 		.x = squaresize,
 	});
-	for(int i=0; i<boxCount; i++){
-		//position
-		Position position;
-		int collisionCount;
-		do{
-			//random
-			position.y = (rand() % height) * squaresize;
-			position.x = (rand() % width) * squaresize;
-
-			//collision
-			List* collisionObjectS = CollisionObjectSGet(worldServer->objectList, position, position);
-			collisionCount = collisionObjectS->length;
-			ListDelete(collisionObjectS, NULL);
-		} while (collisionCount != 0);
-
+	
+	//box generate randomly
+	for(int i=0; i < boxRatio * collisionFreeCountObject; i++){
 		Object* object = ObjectNew();
 		object->created = -1;
 		object->destroy = -1;
-		object->position = position;
+		object->position = SpawnGet(worldServer, 1);
 		object->type = ObjectTypeBox;
 		object->velocity = (Position){
 			.y = 0,
@@ -96,6 +75,14 @@ void worldGenerate(int height, int width, double boxRatio){
 	}
 
 	//enemy generate randomly
+	for(int i=0; i < enemyRatio * collisionFreeCountObject; i++){
+		Character* character = CharacterNew();
+		character->bombCount = 0;
+		character->position = SpawnGet(worldServer, 1);
+		character->type = CharacterTypeEnemy;
+		character->velocity = velocity;
+		ListInsert(&(worldServer->characterList), character);
+	}
 }
 
 UserServer* listFindByFunctionCharacterOwnerVariable;
@@ -117,27 +104,19 @@ Character* characterFind(UserServer* userServer){
 
 //keyMovement calculates user position based on keyItem.key
 //userServer must have a character
-void keyMovement(SDL_Keycode key, UserServer* userServer){
-	if(
-		key != SDLK_w &&
-		key != SDLK_a &&
-		key != SDLK_s &&
-		key != SDLK_d
-	){
-		return;
-	}
-
-	Character* character = characterFind(userServer);
-
+void keyMovement(Character* character){
 	Position positionNew = character->position;
-	if(key == SDLK_w){
-		positionNew.y -= character->velocity.y;
-	} else if(key == SDLK_a){
-		positionNew.x -= character->velocity.x;
-	} else if(key == SDLK_s){
-		positionNew.y += character->velocity.y;
-	} else if(key == SDLK_d){
-		positionNew.x += character->velocity.x;
+	if(character->keyS[KeyUp]){
+		positionNew.y -= character->velocity;
+	}
+	if(character->keyS[KeyLeft]){
+		positionNew.x -= character->velocity;
+	}
+	if(character->keyS[KeyDown]){
+		positionNew.y += character->velocity;
+	}
+	if(character->keyS[KeyRight]){
+		positionNew.x += character->velocity;
 	}
 
 	//collision
@@ -146,13 +125,29 @@ void keyMovement(SDL_Keycode key, UserServer* userServer){
 
 	//[R] collision should not drop position new, just cut it &positionNew to functions
 
-	if (
-		collisionCharacterS->length != 1 ||
-		collisionCharacterS->head->data != character
-	){
-		ListDelete(collisionObjectS, NULL);
-		ListDelete(collisionCharacterS, NULL);
-		return;
+	if(collisionCharacterS->length != 1){
+		//CharacterTypeUser is solid for CharacterTypeUser
+		//CharacterTypeEnemy is not solid for CharacterTypeUser
+		//vice versa with CharacterTypeEnemy
+		//so only same type character is solid
+
+		bool characterTypeSameExist = false;
+		for(ListItem* item = collisionCharacterS->head; item != NULL; item = item->next){
+			if(item->data == character){
+				continue;
+			}
+
+			if(((Character*)item->data)->type == character->type){
+				characterTypeSameExist = true;
+				break;
+			}
+		}
+
+		if(characterTypeSameExist){
+			ListDelete(collisionObjectS, NULL);
+			ListDelete(collisionCharacterS, NULL);
+			return;
+		}
 	}
 	if(collisionObjectS->length != 0){
 		for(ListItem* item = collisionObjectS->head; item != NULL; item = item->next){
@@ -199,12 +194,10 @@ void keyMovement(SDL_Keycode key, UserServer* userServer){
 }
 
 //keyBomb calculates bomb position based on keyItem.key
-void keyBomb(SDL_Keycode key, UserServer* userServer){
-	if(key != SDLK_SPACE){
+void keyBomb(Character* character){
+	if(!character->keyS[KeyBomb]){
 		return;
 	}
-
-	Character* character = characterFind(userServer);
 
 	//bomb available
 	if(character->bombCount == 0){
@@ -383,19 +376,12 @@ void serverTickCalculate(){
 		ListRemoveItem(&(worldServer->objectList), listItemCurrent->prev, ObjectDelete);
 	}
 
-	//player movement
+	//character movement
 	//this should be calculated before fireDestroy() otherwise player would be in fire for 1 tick
-	for(ListItem* item = userServerList->head; item != NULL; item = item->next){
-		Character* character = characterFind((UserServer*)item->data);
-		if(character == NULL){
-			continue;
-		}
-
-		for (int i=0; i<((UserServer*)item->data)->keySLength; i++){
-			//should be before keyMovement as user wants to place bomb on the position currently seeable
-			keyBomb(((UserServer*)item->data)->keyS[i], item->data);
-			keyMovement(((UserServer*)item->data)->keyS[i], item->data);
-		}
+	//if 2 character is racing for the same spot the first in list wins
+	for(ListItem* item = worldServer->characterList->head; item != NULL; item = item->next){
+		keyBomb(item->data);
+		keyMovement(item->data);
 	}
 
 	//destroy by user
@@ -473,7 +459,7 @@ Uint32 serverTick(Uint32 interval, void *param){
 //ServerStart generates world, start accepting connections, starts ticking
 void ServerStart(void){
 	//world generate
-	worldServer = worldGenerate(17, 57, 0.4); //not critical section
+	worldGenerate(17, 57, 0.4, 0.2); //not critical section
 	userServerList = ListNew();
 
 	//mutex init
@@ -537,14 +523,9 @@ void ServerReceive(UserServer* userServerUnsafe){
 	}
 
 	//keyS copy
-	//[R] keySLength may be falsified
-	//[R] make values unique
-	free(userServer->keyS);
-
-	userServer->keySLength = userServerUnsafe->keySLength;
-	userServer->keyS = (SDL_Keycode*) malloc(userServerUnsafe->keySLength * sizeof(SDL_Keycode));
-	for(int i=0; i<userServerUnsafe->keySLength; i++){
-		userServer->keyS[i] = userServerUnsafe->keyS[i];
+	//[R] userServerUnsafe->keyS may not be KeyLength long
+	for(int i=0; i<KeyLength; i++){
+		character->keyS[i] = userServerUnsafe->keyS[i];
 	}
 
 	if(SDL_UnlockMutex(mutex) < 0){

@@ -58,19 +58,13 @@ void networkSendClient(WorldServer* worldServer){
 
 //networkSendServer send userClient to server as UserServer
 void networkSendServer(UserClient* userClient){
-	//keyItemS copy
-	SDL_Keycode* keyS = (SDL_Keycode*) malloc(userClient->keyList->length * sizeof(SDL_Keycode));
-	int index = 0;
-	for(ListItem* item = userClient->keyList->head; item != NULL; item = item->next, index++){
-		keyS[index] = *(SDL_Keycode*)item->data;
-	}
-
 	//create userServer
 	UserServer* userServer = UserServerNew();
-	userServer->keyS = keyS;
-	userServer->keySLength = userClient->keyList->length;
 	strcpy(userServer->auth, userClient->auth);
 	strcpy(userServer->name, userClient->name);
+	for(int i=0; i < KeyLength; i++){
+		userServer->keyS[i] = userClient->keyS[i];
+	}
 
 	//send
 	if(!serverStop){

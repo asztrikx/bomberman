@@ -19,8 +19,7 @@ static SDL_mutex* mutex;
 static UserClient* userClient;
 static int tickId;
 
-//ClientSend sends updates to server
-Uint32 ClientSend(Uint32 interval, void *param){
+Uint32 ClientTick(Uint32 interval, void *param){
 	if (SDL_LockMutex(mutex) != 0){
 		SDL_Log("ClientSend: SDL_LockMutex: %s", SDL_GetError());
 		exit(1);
@@ -42,31 +41,23 @@ void ClientEventKey(SDL_Event sdl_event){
 		exit(1);
 	}
 
-	//key list update
-	bool in = false;
-	for(ListItem* item = userClient->keyList->head; item != NULL; item = item->next) {
-		if(*(SDL_Keycode*)item->data != sdl_event.key.keysym.sym){
-			continue;
-		}
-			
-		//key already in list
-		if(sdl_event.type == SDL_KEYDOWN){
-			in = true;
+	bool activated = sdl_event.type == SDL_KEYDOWN;
+	switch (sdl_event.key.keysym.sym){
+		case SDLK_w:
+			userClient->keyS[KeyUp] = activated;
 			break;
-		}
-
-		//key in list, remove
-		if(sdl_event.type == SDL_KEYUP){
-			ListRemoveItem(&(userClient->keyList), item, IntDelete);
+		case SDLK_d:
+			userClient->keyS[KeyRight] = activated;
 			break;
-		}
-	}
-
-	//key not in list, add
-	if(sdl_event.type == SDL_KEYDOWN && !in){
-		int* key = IntNew();
-		*key = sdl_event.key.keysym.sym;
-		ListInsert(&(userClient->keyList), key);
+		case SDLK_s:
+			userClient->keyS[KeyDown] = activated;
+			break;
+		case SDLK_a:
+			userClient->keyS[KeyLeft] = activated;
+			break;
+		case SDLK_SPACE:
+			userClient->keyS[KeyBomb] = activated;
+			break;
 	}
 
 	if(SDL_UnlockMutex(mutex) < 0){
@@ -82,10 +73,18 @@ void ClientConnect(void){
 	networkConnectServer(userClient); //not critical section
 
 	//server updater
-	tickId = SDL_AddTimer(tickRate, ClientSend, NULL);
+	tickId = SDL_AddTimer(tickRate, ClientTick, NULL);
 	if (tickId == 0){
 		SDL_Log("SDL_AddTimer: %s", SDL_GetError());
 		exit(1);
+	}
+
+	//key press
+	SDL_Event sdl_event;
+	while (SDL_WaitEvent(&sdl_event) && sdl_event.type != SDL_QUIT) {
+		if(sdl_event.type == SDL_KEYDOWN || sdl_event.type == SDL_KEYUP){
+			ClientEventKey(sdl_event);
+		}
 	}
 }
 

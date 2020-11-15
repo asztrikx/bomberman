@@ -1,11 +1,12 @@
 #ifndef TYPE_SERVER_USER_H_INCLUDED
 #define TYPE_SERVER_USER_H_INCLUDED
 
+#include <stdbool.h>
 #include <SDL2/SDL.h>
+#include "../key.h"
 
 typedef struct{
-	SDL_Keycode* keyS;
-	int keySLength;
+	bool keyS[KeyLength];
 	char* name; //if NULL then no update
 	char* auth;
 } UserServer;

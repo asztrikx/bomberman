@@ -4,7 +4,7 @@
 #include "type/geometry.h"
 
 extern int squaresize;
-extern Position velocity;
+extern int velocity;
 extern int windowHeight;
 extern int windowWidth;
 extern const unsigned int tickRate;

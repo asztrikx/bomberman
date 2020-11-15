@@ -16,14 +16,6 @@ int main(int argc, char *argv[]) {
 		ClientStart();
 		ClientConnect();
 
-		//key press
-		SDL_Event sdl_event;
-		while (SDL_WaitEvent(&sdl_event) && sdl_event.type != SDL_QUIT) {
-			if(sdl_event.type == SDL_KEYDOWN || sdl_event.type == SDL_KEYUP){
-				ClientEventKey(sdl_event);
-			}
-		}
-
 		ClientStop();
 		ServerStop();
 		
@@ -41,14 +33,6 @@ int main(int argc, char *argv[]) {
 
 		ClientStart();
 		ClientConnect();
-
-		//key press
-		SDL_Event sdl_event;
-		while (SDL_WaitEvent(&sdl_event) && sdl_event.type != SDL_QUIT) {
-			if(sdl_event.type == SDL_KEYDOWN || sdl_event.type == SDL_KEYUP){
-				ClientEventKey(sdl_event);
-			}
-		}
 
 		ClientStop();
 
