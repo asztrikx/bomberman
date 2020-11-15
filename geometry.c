@@ -150,7 +150,7 @@ int CollisionFreeCountObjectGet(WorldServer* worldServer, Position position){
 }
 
 //SpawnGet return a position where there's at least 3 free space reachable without action so player does not die instantly
-Position SpawnGet(WorldServer* worldServer){
+Position SpawnGet(WorldServer* worldServer, int collisionFreeCountObjectMin){
 	Position positionCompressed;
 	Position position;
 	int collisionCountCharacter;
@@ -174,7 +174,7 @@ Position SpawnGet(WorldServer* worldServer){
 		collisionFreeCountObject = CollisionFreeCountObjectGet(worldServer, position);
 	} while (
 		collisionCountCharacter != 0 ||
-		collisionFreeCountObject <= 2
+		collisionFreeCountObject < collisionFreeCountObjectMin
 	);
 
 	return position;

@@ -92,6 +92,8 @@ WorldServer* worldGenerate(int height, int width, double boxRatio){
 		ListInsert(&(worldServer->objectList), object);
 	}
 
+	//enemy generate randomly
+
 	return worldServer;
 }
 
@@ -605,7 +607,7 @@ void ServerConnect(UserServer* userServerUnsafe){
 	}
 
 	//spawn
-	Position position = SpawnGet(worldServer);
+	Position position = SpawnGet(worldServer, 3);
 
 	//character insert
 	Character* character = CharacterNew();

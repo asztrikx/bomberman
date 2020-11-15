@@ -9,7 +9,7 @@ bool CollisionPointGet(Position position1, Position position2);
 bool CollisionLineGet(Position from, Position to, Position obstacle);
 List* CollisionObjectSGet(List* list, Position from, Position to);
 List* CollisionCharacterSGet(List* list, Position from, Position to);
-Position SpawnGet(WorldServer* worldServer);
+Position SpawnGet(WorldServer* worldServer, int collisionFreeCountObjectMin);
 int CollisionFreeCountObjectGet(WorldServer* worldServer, Position position);
 
 #endif
