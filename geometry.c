@@ -88,7 +88,7 @@ List* CollisionCharacterSGet(List* list, Position from, Position to){
 	return listCollision;
 }
 
-bool** collisionFreeCountObjectGetMemory = NULL;
+bool** collisionFreeCountObjectGetMemory;
 int collisionFreeCountObjectGetRecursion(WorldServer* worldServer, Position positionCompress){
 	Position position;
 	position.y = positionCompress.y * squaresize;
