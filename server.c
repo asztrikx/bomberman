@@ -29,6 +29,7 @@ WorldServer* worldGenerate(int height, int width, double boxRatio){
 	worldServer->height = height;
 	worldServer->width = width;
 	
+	//wall generate
 	for(int i=0; i<height; i++){
 		for(int j=0; j<width; j++){
 			if(
@@ -48,7 +49,7 @@ WorldServer* worldGenerate(int height, int width, double boxRatio){
 		}
 	}
 	
-	//box generate
+	//box generate randomly
 	if(
 		RAND_MAX != INT32_MAX && (
 			RAND_MAX + 1 < height ||

@@ -54,7 +54,7 @@ bool CollisionLineGet(Position from, Position to, Position obstacle){
 	return false;
 }
 
-//CollisionObjectSGet return all collisions in line (from, to)
+//CollisionObjectSGet returns all collisions in line (from, to)
 //returned list is a reference list, which must be freed without deleting data
 List* CollisionObjectSGet(List* list, Position from, Position to){
 	List* listCollision = ListNew();
@@ -71,7 +71,7 @@ List* CollisionObjectSGet(List* list, Position from, Position to){
 	return listCollision;
 }
 
-//CollisionCharacterSGet return all collisions in line (from, to)
+//CollisionCharacterSGet returns all collisions in line (from, to)
 //returned list is a reference list, which must be freed without deleting data
 List* CollisionCharacterSGet(List* list, Position from, Position to){
 	List* listCollision = ListNew();
@@ -127,7 +127,7 @@ int collisionFreeCountObjectGetRecursion(WorldServer* worldServer, Position posi
 	return collisionFreeCountObject;
 }
 
-//collisionFreeCountObject return how many square sized object-free area is reachable from (position / squaresize)
+//collisionFreeCountObject returns how many square sized object-free area is reachable from (position - position % squaresize)
 int CollisionFreeCountObjectGet(WorldServer* worldServer, Position position){
 	//memory alloc
 	collisionFreeCountObjectGetMemory = (bool**) malloc(worldServer->height * sizeof(bool*));
