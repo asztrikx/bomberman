@@ -276,33 +276,40 @@ char* ServerAuthCreate(){
 //bombExplode removes bomb and creates fire in its place
 //if object->type != ObjectTypeBomb then nothing happens
 void bombExplode(Object* object){
-	//fire add
-	int radius = 1;
+	//fire inserts
+	int directionX[] = {0, 1, -1, 0, 0};
+	int directionY[] = {0, 0, 0, 1, -1};
+	for(int j=0; j<5; j++){
+		Position position = (Position){
+			.y = object->position.y + directionY[j] * squaresize,
+			.x = object->position.x + directionX[j] * squaresize,
+		};
 
-	//fire insert
-	//[R] collision with walls
-	int directionX[] = {1, -1, 0, 0};
-	int directionY[] = {0, 0, 1, -1};
-	for(int i=0; i<=radius; i++){
-		for(int j=0; j<4; j++){
-			Object* objectFire = ObjectNew();
-			objectFire->bombOut = true;
-			objectFire->created = tickCount;
-			objectFire->destroy = tickCount + 0.25 * tickSecond;
-			objectFire->owner = object->owner;
-			objectFire->position = (Position){
-				.y = object->position.y + i * directionY[j] * squaresize,
-				.x = object->position.x + i * directionX[j] * squaresize,
-			};
-			objectFire->type = ObjectTypeBombFire;
-			objectFire->velocity = 0;
-			ListInsert(&(worldServer->objectList), objectFire);
-
-			//otherwise there would be 4 fire in the same spot
-			if(i == 0){
+		List* collsionS = CollisionPointAllObjectGet(worldServer->objectList, position, object, NULL);
+		bool boxExists = collsionS->length == 0;
+		for(ListItem* item = collsionS->head; item != NULL; item = item->next){
+			if(((Object*)item->data)->type == ObjectTypeBox){
+				boxExists = true;
 				break;
 			}
 		}
+		if(!boxExists && collsionS->length != 0){
+			ListDelete(collsionS, NULL);
+			continue;
+		}
+		ListDelete(collsionS, NULL);
+
+		Object* objectFire = ObjectNew();
+		objectFire->bombOut = true;
+		objectFire->created = tickCount;
+		objectFire->destroy = tickCount + 0.25 * tickSecond;
+		objectFire->owner = object->owner;
+		objectFire->position = position;
+		objectFire->type = ObjectTypeBombFire;
+		objectFire->velocity = 0;
+
+
+		ListInsert(&(worldServer->objectList), objectFire);
 	}
 
 	//bomb remove
