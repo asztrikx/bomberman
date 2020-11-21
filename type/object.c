@@ -9,13 +9,10 @@ Object* ObjectNew(){
 	object->created = -1;
 	object->destroy = -1;
 	object->position = (Position){
-			.y = 0,
-			.x = 0,
-		};
-	object->velocity = (Position){
 		.y = 0,
 		.x = 0,
 	};
+	object->velocity = 0;
 	object->bombOut = true;
 	object->owner = NULL;
 	object->animation = (Animation){

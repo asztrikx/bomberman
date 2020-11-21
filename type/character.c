@@ -11,11 +11,16 @@ Character* CharacterNew(){
 		.stateDelayTick = 0,
 		.stateDelayTickEnd = 0,
 	};
-	character->owner = NULL;
+	character->bombCount = 0;
 	for(int i=0; i<KeyLength; i++){
 		character->keyS[i] = false;
 	}
-
+	character->owner = NULL;
+	character->position = (Position){
+		.y = 0,
+		.x = 0,
+	};
+	character->velocity = 0;
 	return character;
 }
 

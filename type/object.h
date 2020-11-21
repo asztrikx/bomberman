@@ -18,7 +18,7 @@ typedef struct{
 	ObjectType type;
 	long long created;
 	long long destroy; //-1 means never gets destroyed by server
-	Position velocity;
+	int velocity;
 	Character* owner; //NULL if server or disconnected player
 	bool bombOut; //only for ObjectTypeBomb signaling whether player has moved out from bomb
 	Animation animation;
