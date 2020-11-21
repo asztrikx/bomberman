@@ -370,7 +370,7 @@ void serverTickCalculateWin(){
 
 			//remove
 			ListItem* listItem = ListFindItemByPointer(worldServer->characterList, character);
-			ListRemoveItem(&(worldServer->objectList), listItem, CharacterDelete);
+			ListRemoveItem(&(worldServer->characterList), listItem, CharacterDelete);
 		}
 	}
 	ListDelete(collisionCharacterS, NULL);
