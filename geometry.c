@@ -7,8 +7,8 @@
 #include "type/object.h"
 #include "type/character.h"
 
-//CollisionPoint tells whether there's a collision between objects at positions
-bool CollisionPoint(Position position1, Position position2){
+//Collision tells whether there's a collision between objects at positions
+bool Collision(Position position1, Position position2){
 	if(abs(position1.x - position2.x) >= squaresize){
 		return false;
 	}
@@ -18,9 +18,10 @@ bool CollisionPoint(Position position1, Position position2){
 	return true;
 }
 
-//CollisionPointAllObjectGet tells whether there's a collision between this and any Object
+//CollisionObjectSGet returns a List with Objects colliding with this
+//collisionDecideObjectFunction decides for each object whether it should be taking into account
 //if collisionDecideObjectFunction is NULL then it's treated as always true
-List* CollisionPointAllObjectGet(List* objectS, Position position, void* this, CollisionDecideObjectFunction collisionDecideObjectFunction){
+List* CollisionObjectSGet(List* objectS, Position position, void* this, CollisionDecideObjectFunction collisionDecideObjectFunction){
 	List* listCollision = ListNew();
 
 	for(ListItem* item = objectS->head; item != NULL; item = item->next){
@@ -28,7 +29,7 @@ List* CollisionPointAllObjectGet(List* objectS, Position position, void* this, C
 			continue;
 		}
 
-		if(!CollisionPoint(position, ((Object*)item->data)->position)){
+		if(!Collision(position, ((Object*)item->data)->position)){
 			continue;
 		}
 
@@ -48,9 +49,10 @@ List* CollisionPointAllObjectGet(List* objectS, Position position, void* this, C
 	return listCollision;
 }
 
-//CollisionPointAllCharacterGet tells whether there's a collision between this and any Character
+//CollisionCharacterSGet returns a List with Characters colliding with this
+//collisionDecideCharacterFunction decides for each object whether it should be taking into account
 //if collisionDecideCharacterFunction is NULL then it's treated as always true
-List* CollisionPointAllCharacterGet(List* characterS, Position position, void* this, CollisionDecideCharacterFunction collisionDecideCharacterFunction){
+List* CollisionCharacterSGet(List* characterS, Position position, void* this, CollisionDecideCharacterFunction collisionDecideCharacterFunction){
 	List* listCollision = ListNew();
 
 	for(ListItem* item = characterS->head; item != NULL; item = item->next){
@@ -58,7 +60,7 @@ List* CollisionPointAllCharacterGet(List* characterS, Position position, void* t
 			continue;
 		}
 
-		if(!CollisionPoint(position, ((Character*)item->data)->position)){
+		if(!Collision(position, ((Character*)item->data)->position)){
 			continue;
 		}
 
@@ -78,7 +80,7 @@ List* CollisionPointAllCharacterGet(List* characterS, Position position, void* t
 	return listCollision;
 }
 
-//CollisionLinePositionGet tells whether there is collision with obstacle in discrete line (from, to)
+//CollisionLinePositionGet calculates position taking collision into account in discrete line (from, to)
 //from must not be equal to to
 //we can be NULL
 Position CollisionLinePositionGet(
@@ -119,8 +121,8 @@ Position CollisionLinePositionGet(
 		//step y
 		current.y += unit.y;
 
-		List* collisionPointAllObject = CollisionPointAllObjectGet(worldServer->objectList, current, we, collisionDecideObjectFunction);
-		List* collisionPointAllCharacter = CollisionPointAllCharacterGet(worldServer->characterList, current, we, collisionDecideCharacterFunction);
+		List* collisionPointAllObject = CollisionObjectSGet(worldServer->objectList, current, we, collisionDecideObjectFunction);
+		List* collisionPointAllCharacter = CollisionCharacterSGet(worldServer->characterList, current, we, collisionDecideCharacterFunction);
 		if(
 			collisionPointAllObject->length != 0 ||
 			collisionPointAllCharacter->length != 0
@@ -133,8 +135,8 @@ Position CollisionLinePositionGet(
 		//step x
 		current.x += unit.x;
 
-		collisionPointAllObject = CollisionPointAllObjectGet(worldServer->objectList, current, we, collisionDecideObjectFunction);
-		collisionPointAllCharacter = CollisionPointAllCharacterGet(worldServer->characterList, current, we, collisionDecideCharacterFunction);
+		collisionPointAllObject = CollisionObjectSGet(worldServer->objectList, current, we, collisionDecideObjectFunction);
+		collisionPointAllCharacter = CollisionCharacterSGet(worldServer->characterList, current, we, collisionDecideCharacterFunction);
 		if(
 			collisionPointAllObject->length != 0 ||
 			collisionPointAllCharacter->length != 0
@@ -165,7 +167,7 @@ int CollisionFreeCountObjectGetRecursion(WorldServer* worldServer, Position posi
 	collisionFreeCountObjectGetMemory[positionCompress.y][positionCompress.x] = true;
 
 	//position is valid
-	List* collisionListObject = CollisionPointAllObjectGet(worldServer->objectList, position, NULL, NULL);
+	List* collisionListObject = CollisionObjectSGet(worldServer->objectList, position, NULL, NULL);
 	int collisionCount = collisionListObject->length;
 	ListDelete(collisionListObject, NULL);
 
@@ -239,7 +241,7 @@ Position SpawnGet(WorldServer* worldServer, int collisionFreeCountObjectMin){
 		position.x = positionCompressed.x * squaresize;
 
 		//collision check
-		List* collisionListCharacter = CollisionPointAllCharacterGet(worldServer->characterList, position, NULL, NULL);
+		List* collisionListCharacter = CollisionCharacterSGet(worldServer->characterList, position, NULL, NULL);
 		collisionCountCharacter = collisionListCharacter->length;
 		ListDelete(collisionListCharacter, NULL);
 

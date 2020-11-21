@@ -13,9 +13,9 @@ typedef bool (*CollisionDecideObjectFunction)(void*, Object*);
 //CollisionDecideCharacterFunction first paramtere is this
 typedef bool (*CollisionDecideCharacterFunction)(void*, Character*);
 
-bool CollisionPoint(Position position1, Position position2);
-List* CollisionPointAllObjectGet(List* objectS, Position position, void* this, CollisionDecideObjectFunction collisionDecideObjectFunction);
-List* CollisionPointAllCharacterGet(List* characterS, Position position, void* this, CollisionDecideCharacterFunction collisionDecideCharacterFunction);
+bool Collision(Position position1, Position position2);
+List* CollisionObjectSGet(List* objectS, Position position, void* this, CollisionDecideObjectFunction collisionDecideObjectFunction);
+List* CollisionCharacterSGet(List* characterS, Position position, void* this, CollisionDecideCharacterFunction collisionDecideCharacterFunction);
 Position CollisionLinePositionGet(
 	WorldServer* worldServer,
 	Position from,

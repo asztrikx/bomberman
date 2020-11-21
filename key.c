@@ -76,7 +76,7 @@ void KeyMovement(Character* character, WorldServer* worldServer){
 			object->type == ObjectTypeBomb &&
 			object->owner == character &&
 			!object->bombOut &&
-			!CollisionPoint(character->position, object->position)
+			!Collision(character->position, object->position)
 		){
 			object->bombOut = true;
 		}
@@ -103,8 +103,8 @@ void KeyBombPlace(Character* character, WorldServer* worldServer, long long tick
 	}
 
 	//collision
-	List* collisionObjectS = CollisionPointAllObjectGet(worldServer->objectList, positionNew, NULL, NULL);
-	List* collisionCharacterS = CollisionPointAllCharacterGet(worldServer->characterList, positionNew, character, NULL);
+	List* collisionObjectS = CollisionObjectSGet(worldServer->objectList, positionNew, NULL, NULL);
+	List* collisionCharacterS = CollisionCharacterSGet(worldServer->characterList, positionNew, character, NULL);
 
 	if(
 		collisionCharacterS->length != 0 ||

@@ -268,18 +268,20 @@ A játékot parancssorból lehet elindítani, onnatól a játékmenet lényegi r
 	```
 - geometry
 	```c
-	//CollisionPoint tells whether there's a collision between objects at positions
-	bool CollisionPoint(Position position1, Position position2)
+	//Collision tells whether there's a collision between objects at positions
+	bool Collision(Position position1, Position position2)
 
-	//CollisionPointAllObjectGet tells whether there's a collision between this and any Object
+	//CollisionObjectSGet returns a List with Objects colliding with this
+	//collisionDecideObjectFunction decides for each object whether it should be taking into account
 	//if collisionDecideObjectFunction is NULL then it's treated as always true
-	List* CollisionPointAllObjectGet(List* objectS, Position position, void* this, CollisionDecideObjectFunction collisionDecideObjectFunction)
-
-	//CollisionPointAllCharacterGet tells whether there's a collision between this and any Character
+	List* CollisionObjectSGet(List* objectS, Position position, void* this, Collision
+		
+	//CollisionCharacterSGet returns a List with Characters colliding with this
+	//collisionDecideCharacterFunction decides for each object whether it should be taking into account
 	//if collisionDecideCharacterFunction is NULL then it's treated as always true
-	List* CollisionPointAllCharacterGet(List* characterS, Position position, void* this, CollisionDecideCharacterFunction collisionDecideCharacterFunction)
+	List* CollisionCharacterSGet(List* characterS, Position position, void* this, CollisionDecideCharacterFunction collisionDecideCharacterFunction)
 
-	//CollisionLinePositionGet tells whether there is collision with obstacle in discrete line (from, to)
+	//CollisionLinePositionGet calculates position taking collision into account in discrete line (from, to)
 	//from must not be equal to to
 	//we can be NULL
 	Position CollisionLinePositionGet(

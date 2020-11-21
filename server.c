@@ -151,19 +151,19 @@ static void TickCalculateDestroyBomb(Object* object){
 			.x = object->position.x + directionX[j] * squaresize,
 		};
 
-		List* collsionS = CollisionPointAllObjectGet(worldServer->objectList, position, object, NULL);
-		bool boxExists = collsionS->length == 0;
-		for(ListItem* item = collsionS->head; item != NULL; item = item->next){
+		List* collisionObjectS = CollisionObjectSGet(worldServer->objectList, position, object, NULL);
+		bool boxExists = collisionObjectS->length == 0;
+		for(ListItem* item = collisionObjectS->head; item != NULL; item = item->next){
 			if(((Object*)item->data)->type == ObjectTypeBox){
 				boxExists = true;
 				break;
 			}
 		}
-		if(!boxExists && collsionS->length != 0){
-			ListDelete(collsionS, NULL);
+		if(!boxExists && collisionObjectS->length != 0){
+			ListDelete(collisionObjectS, NULL);
 			continue;
 		}
-		ListDelete(collsionS, NULL);
+		ListDelete(collisionObjectS, NULL);
 
 		Object* objectFire = ObjectNew();
 		objectFire->bombOut = true;
@@ -192,7 +192,7 @@ static void TickCalculateFireDestroy(){
 		}
 		
 		//object collision
-		List* collisionObjectS = CollisionPointAllObjectGet(worldServer->objectList, object->position, NULL, NULL);
+		List* collisionObjectS = CollisionObjectSGet(worldServer->objectList, object->position, NULL, NULL);
 		for(ListItem* item = collisionObjectS->head; item != NULL; item = item->next){
 			if(((Object*)item->data)->type == ObjectTypeBox){
 				ListItem* listItem = ListFindItemByPointer(worldServer->objectList, item->data);
@@ -206,7 +206,7 @@ static void TickCalculateFireDestroy(){
 		ListDelete(collisionObjectS, NULL);
 
 		//character collision
-		List* collisionCharacterS = CollisionPointAllCharacterGet(worldServer->characterList, object->position, NULL, NULL);
+		List* collisionCharacterS = CollisionCharacterSGet(worldServer->characterList, object->position, NULL, NULL);
 		for(ListItem* item = collisionCharacterS->head; item != NULL; item = item->next){
 			//get
 			ListItem* listItem = ListFindItemByPointer(worldServer->characterList, item->data);
@@ -230,7 +230,7 @@ static bool TickCalculateEnemyKillCollisionDetect(void* this, Character* that){
 
 //TickCalculateWin checks if any CharacterTypeUser if in a winning state and removes them if so
 static void TickCalculateWin(){
-	List* collisionCharacterS = CollisionPointAllCharacterGet(worldServer->characterList, worldServer->exit->position, NULL, NULL);
+	List* collisionCharacterS = CollisionCharacterSGet(worldServer->characterList, worldServer->exit->position, NULL, NULL);
 	for(ListItem* item = collisionCharacterS->head; item != NULL; item = item->next){
 		Character* character = item->data;
 		if(
@@ -257,7 +257,7 @@ static void TickCalculateEnemyKill(){
 			continue;
 		}
 
-		List* collisionCharacterS = CollisionPointAllCharacterGet(
+		List* collisionCharacterS = CollisionCharacterSGet(
 			worldServer->characterList,
 			character->position,
 			character,
@@ -379,7 +379,7 @@ static void TickCalculate(){
 static void TickSend(){
 	for(ListItem* item = userServerList->head; item != NULL; item = item->next){
 		//remove exit if not seeable
-		List* collisionObjectS = CollisionPointAllObjectGet(worldServer->objectList, worldServer->exit->position, worldServer->exit, NULL);
+		List* collisionObjectS = CollisionObjectSGet(worldServer->objectList, worldServer->exit->position, worldServer->exit, NULL);
 		Object* exit = worldServer->exit;
 		if(collisionObjectS->length != 0){
 			//NetworkSendClient will remove it from list
