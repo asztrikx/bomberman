@@ -10,6 +10,7 @@ typedef enum{
 	ObjectTypeBombFire,
 	ObjectTypeWall,
 	ObjectTypeBox,
+	ObjectTypeExit,
 } ObjectType;
 
 typedef struct{

@@ -25,6 +25,7 @@ void sdlResourceListLoadObject(void){
 		ObjectTypeBombFire,
 		ObjectTypeBox,
 		ObjectTypeWall,
+		ObjectTypeExit,
 	};
 	TextureSSLengthObject = sizeof(objectTypeS) / sizeof(ObjectType);
 
@@ -46,6 +47,9 @@ void sdlResourceListLoadObject(void){
 				break;
 			case ObjectTypeWall:
 				folder = "object/wall";
+				break;
+			case ObjectTypeExit:
+				folder = "object/exit";
 				break;
 		}
 

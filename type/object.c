@@ -16,7 +16,7 @@ Object* ObjectNew(){
 		.y = 0,
 		.x = 0,
 	};
-	object->bombOut = false;
+	object->bombOut = true;
 	object->owner = NULL;
 	object->animation = (Animation){
 		.state = 0,

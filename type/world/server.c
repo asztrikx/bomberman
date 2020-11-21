@@ -19,7 +19,7 @@ WorldServer* WorldServerNew(){
 //WorldServerDelete frees WorldServer
 void WorldServerDelete(WorldServer* worldServer){
 	ListDelete(worldServer->characterList, CharacterDelete);
-	free(worldServer->exit);
+	//ObjectDelete(worldServer->exit); not handled by this
 	ListDelete(worldServer->objectList, ObjectDelete);
 	free(worldServer);
 }

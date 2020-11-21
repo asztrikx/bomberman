@@ -4,13 +4,15 @@
 #include "../object.h"
 #include "../character.h"
 #include "../geometry.h"
+#include "../gamestate.h"
 
 typedef struct{
 	Object* objectS;
 	int objectSLength;
 	Character* characterS;
 	int characterSLength;
-	Position* exit; //may not exists (for client)
+	Object* exit; //may not exists (for client)
+	Gamestate gamestate;
 } WorldClient;
 
 WorldClient* WorldClientNew();

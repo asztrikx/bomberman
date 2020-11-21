@@ -22,7 +22,12 @@ static int tickId;
 //worldGenerate generates default map
 //free should be called
 void worldGenerate(int height, int width){
-	if(height % 2 != 1 || width % 2 != 1){
+	if(
+		height % 2 != 1 ||
+		width % 2 != 1 ||
+		height < 5 ||
+		width < 5
+	){
 		SDL_Log("worldGenerate: World size is malformed");
 		exit(1);
 	}
@@ -48,7 +53,6 @@ void worldGenerate(int height, int width){
 					.x = j * squaresize,
 				};
 				object->type = ObjectTypeWall;
-				object->bombOut = true;
 				ListInsert(&(worldServer->objectList), object);
 			}
 		}
@@ -60,23 +64,22 @@ void worldGenerate(int height, int width){
 	});
 	
 	//box generate randomly
-	for(int i=0; i < boxRatio * collisionFreeCountObject; i++){
+	for(int i=0; i < (int)(boxRatio * collisionFreeCountObject); i++){
 		Object* object = ObjectNew();
-		object->created = -1;
-		object->destroy = -1;
 		object->position = SpawnGet(worldServer, 1);
 		object->type = ObjectTypeBox;
-		object->velocity = (Position){
-			.y = 0,
-			.x = 0
-		};
-		object->bombOut = true;
-		object->owner = NULL;
 		ListInsert(&(worldServer->objectList), object);
 	}
 
+	//exit
+	Object* object = ObjectNew();
+	object->position = ((Object*)worldServer->objectList->head->data)->position;
+	object->type = ObjectTypeExit;
+	ListInsert(&(worldServer->objectList), object);
+	worldServer->exit = object;
+
 	//enemy generate randomly
-	for(int i=0; i < enemyRatio * collisionFreeCountObject; i++){
+	for(int i=0; i < (int)(enemyRatio * collisionFreeCountObject); i++){
 		Character* character = CharacterNew();
 		character->bombCount = 0;
 		character->position = SpawnGet(worldServer, 1);
@@ -105,23 +108,14 @@ Character* characterFind(UserServer* userServer){
 }
 
 bool keyMovementCollisionDetectObject(void* this, Object* that){
-	//player can be inside fire (it will die in this exact tick)
-	if(that->type == ObjectTypeBombFire){
-		return false;
-	}
-
-	//player can be inside bomb
-	//it can be inside two bomb
-	//eg: inside firstly placed one and just placed one into neighbourgh position
-	if(
-		that->type == ObjectTypeBomb &&
-		that->owner == (Character*)this &&
-		!that->bombOut
-	){
-		return false;
-	}
-
-	return true;
+	return
+		that->type == ObjectTypeWall ||
+		that->type == ObjectTypeBox || (
+			that->type == ObjectTypeBomb && (
+				that->owner != (Character*)this ||
+				that->bombOut
+			)
+		);
 }
 
 bool keyMovementCollisionDetectCharacter(void* this, Character* that){
@@ -326,12 +320,7 @@ void bombExplode(Object* object){
 }
 
 //clientDrawCharacterFind destroys all ObjectTypeBox and ObjectTypeCharacter if object is ObjectTypeBombFire
-//if object->type != ObjectTypeFire then nothing happens
 void fireDestroy(Object* object){
-	if(object->type != ObjectTypeBombFire){
-		return;
-	}
-
 	//object collision
 	List* collisionObjectS = CollisionPointAllObjectGet(worldServer->objectList, object->position, NULL, NULL);
 	for(ListItem* item = collisionObjectS->head; item != NULL; item = item->next){
@@ -347,15 +336,70 @@ void fireDestroy(Object* object){
 	//character collision
 	List* collisionCharacterS = CollisionPointAllCharacterGet(worldServer->characterList, object->position, NULL, NULL);
 	for(ListItem* item = collisionCharacterS->head; item != NULL; item = item->next){
-		//remove item
+		//get
 		ListItem* listItem = ListFindItemByPointer(worldServer->characterList, item->data);
+
+		//UserServer update
+		if(((Character*)listItem->data)->owner != NULL){
+			((Character*)listItem->data)->owner->gamestate = GamestateDead;
+		}
+
+		//remove
 		ListRemoveItem(&(worldServer->characterList), listItem, CharacterDelete);
 	}
 	ListDelete(collisionCharacterS, NULL);
 }
 
-bool enemyKillCollisionDetectCharacter(void* this, Character* that){
+bool enemyKillCollisionDetect(void* this, Character* that){
 	return that->type == CharacterTypeEnemy;
+}
+
+void serverTickCalculateWin(){
+	List* collisionCharacterS = CollisionPointAllCharacterGet(worldServer->characterList, worldServer->exit->position, NULL, NULL);
+	for(ListItem* item = collisionCharacterS->head; item != NULL; item = item->next){
+		Character* character = (Character*)item->data;
+		if(
+			character->type == CharacterTypeUser &&
+			worldServer->characterList->length == 1
+		){
+			//UserServer update
+			character->owner->gamestate = GamestateWon;
+
+			//remove
+			ListItem* listItem = ListFindItemByPointer(worldServer->characterList, character);
+			ListRemoveItem(&(worldServer->objectList), listItem, CharacterDelete);
+		}
+	}
+	ListDelete(collisionCharacterS, NULL);
+}
+
+void serverTickCalculateEnemyKill(){
+	List* deathS = ListNew();
+	for(ListItem* item = worldServer->characterList->head; item != NULL; item = item->next){
+		Character* character = (Character*)item->data;
+		if(character->type != CharacterTypeUser){
+			continue;
+		}
+
+		List* collisionCharacterS = CollisionPointAllCharacterGet(
+			worldServer->characterList,
+			character->position,
+			character,
+			enemyKillCollisionDetect
+		);
+
+		//death
+		if(collisionCharacterS->length != 0){
+			character->owner->gamestate = GamestateDead;
+			ListInsert(&deathS, item);
+		}
+
+		ListDelete(collisionCharacterS, NULL);
+	}
+	for(ListItem* item = deathS->head; item != NULL; item = item->next){
+		ListRemoveItem(&(worldServer->characterList), (ListItem*)item->data, CharacterDelete);
+	}
+	ListDelete(deathS, NULL);
 }
 
 //serverTickCalculate calculates new world state from current
@@ -404,38 +448,19 @@ void serverTickCalculate(){
 		keyMovement(item->data);
 	}
 
+	//win
+	//should be before any destroy
+	serverTickCalculateWin();
+
 	//destroy by user
 	for(ListItem* item = worldServer->objectList->head; item != NULL; item = item->next){
-		fireDestroy(item->data);
+		if(((Object*)item->data)->type == ObjectTypeBombFire){
+			fireDestroy(item->data);
+		}
 	}
 
 	//destroy by enemy
-	List* deathS = ListNew();
-	for(ListItem* item = worldServer->characterList->head; item != NULL; item = item->next){
-		Character* character = (Character*)item->data;
-		if(character->type != CharacterTypeUser){
-			continue;
-		}
-
-		List* collisionCharacterS = CollisionPointAllCharacterGet(
-			worldServer->characterList,
-			character->position,
-			character,
-			enemyKillCollisionDetectCharacter
-		);	
-		
-		//death
-		if(collisionCharacterS->length != 0){
-			ListInsert(&deathS, character);
-		}
-
-		ListDelete(collisionCharacterS, NULL);
-	}
-	for(ListItem* item = deathS->head; item != NULL; item = item->next){
-		ListItem* listItem = ListFindItemByPointer(worldServer->characterList, item->data);
-		ListRemoveItem(&(worldServer->characterList), listItem, CharacterDelete);
-	}
-	ListDelete(deathS, NULL);
+	serverTickCalculateEnemyKill();
 
 	//animate
 	for (ListItem* item = worldServer->objectList->head; item != NULL; item = item->next){
@@ -471,16 +496,31 @@ void serverTickCalculate(){
 //serverTickSend sends new world to connected clients
 void serverTickSend(){
 	for(ListItem* item = userServerList->head; item != NULL; item = item->next){
-		Character* character = characterFind((UserServer*)item->data);
-
+		//remove exit if not seeable
+		List* collisionObjectS = CollisionPointAllObjectGet(worldServer->objectList, worldServer->exit->position, worldServer->exit, NULL);
+		Object* exit = worldServer->exit;
+		if(collisionObjectS->length != 0){
+			//networkSendClient will remove it from list
+			worldServer->exit = NULL;
+		}
+		ListDelete(collisionObjectS, NULL);
+		
 		//alter user character to be identifiable
+		Character* character = characterFind((UserServer*)item->data);
 		if(character != NULL){
 			character->type = CharacterTypeYou;	
 		}
-		networkSendClient(worldServer);
+
+		//send
+		networkSendClient(worldServer, (UserServer*)item->data);
+
+		//remove character alter
 		if(character != NULL){
 			character->type = CharacterTypeUser;	
 		}
+
+		//remove exit remove
+		worldServer->exit = exit;
 	}
 }
 
@@ -507,7 +547,7 @@ Uint32 serverTick(Uint32 interval, void *param){
 //ServerStart generates world, start accepting connections, starts ticking
 void ServerStart(void){
 	//world generate
-	worldGenerate(17, 57); //not critical section
+	worldGenerate(worldHeight, worldWidth); //not critical section
 	userServerList = ListNew();
 
 	//mutex init
@@ -618,6 +658,7 @@ void ServerConnect(UserServer* userServerUnsafe){
 	UserServer* userServer = UserServerNew();
 	strncpy(userServer->name, userServerUnsafe->name, 15);
 	userServer->name[15] = '\0';
+	userServer->gamestate = GamestateRunning;
 
 	//userServer insert
 	ListInsert(&userServerList, userServer);

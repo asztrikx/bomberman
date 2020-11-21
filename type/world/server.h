@@ -3,11 +3,12 @@
 
 #include "../list.h"
 #include "../geometry.h"
+#include "../object.h"
 
 typedef struct{
 	List* objectList;
 	List* characterList;
-	Position* exit;
+	Object* exit; //not handled by this
 	int height, width;
 } WorldServer;
 

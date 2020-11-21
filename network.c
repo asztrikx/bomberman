@@ -22,21 +22,36 @@ void networkClientStart(void){
 
 //networkSendClient send worldServer to client as WorldClient
 //worldServer is not locked with mutex
-void networkSendClient(WorldServer* worldServer){
+void networkSendClient(WorldServer* worldServer, UserServer* userServer){
 	WorldClient* worldClient = WorldClientNew();
+
+	//gamestate
+	worldClient->gamestate = userServer->gamestate;
 
 	//exit
 	if(worldServer->exit != NULL){
-		worldClient->exit = (Position*) malloc(sizeof(Position));
+		worldClient->exit = ObjectNew();
 		*(worldClient->exit) = *(worldServer->exit);
 	}
 	
 	//objectS
 	worldClient->objectSLength = worldServer->objectList->length;
+	if(worldServer->exit == NULL){
+		worldClient->objectSLength--;
+	}
 	worldClient->objectS = (Object*) malloc(worldServer->objectList->length * sizeof(Object));
 	int index = 0;
 	for(ListItem* item = worldServer->objectList->head; item != NULL; item = item->next, index++){
-		worldClient->objectS[index] = *(Object*)(item->data);
+		//remove exit
+		if(
+			((Object*)item->data)->type == ObjectTypeExit &&
+			worldServer->exit == NULL
+		){
+			index--;
+			continue;
+		}
+
+		worldClient->objectS[index] = *((Object*)item->data);
 	}
 
 	//characterS
