@@ -26,7 +26,7 @@ static bool KeyMovementCollisionDetectCharacter(void* this, Character* that){
 	//CharacterTypeEnemy is not solid for CharacterTypeUser
 	//vice versa with CharacterTypeEnemy
 	//so only same type character is solid
-	return that->type != ((Character*)this)->type;
+	return that->type == ((Character*)this)->type;
 }
 
 //KeyMovement moves character based on it's pressed keys
