@@ -123,7 +123,7 @@ void SDLInit(void){
 	}
 
 	//window
-	SDLWindow = SDL_CreateWindow("alt", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, windowWidth, windowHeight, 0);
+	SDLWindow = SDL_CreateWindow("Bomberman", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, windowWidth, windowHeight, 0);
 	if (SDLWindow == NULL) {
 		SDL_Log("sdl window: %s", SDL_GetError());
 		exit(1);

@@ -1,5 +1,5 @@
 #!/bin/bash
-cd /mnt/hdd/Programming/C/temp/nhf/
+cd /mnt/hdd/Programming/C/BME/bomberman/
 location=$(pwd)'/'
 regex='s:./:'$location':'
 
