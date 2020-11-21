@@ -5,4 +5,6 @@ typedef struct{
 	int y, x;
 } Position;
 
+bool PositionSame(Position a, Position b);
+
 #endif

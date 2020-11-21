@@ -10,6 +10,7 @@
 #include "type/character.h"
 #include "type/key.h"
 #include "config.h"
+#include <stdlib.h>
 
 //mutex handles all global variable which is modified in critical sections
 static SDL_mutex* mutex;
@@ -80,21 +81,22 @@ void worldGenerate(int height, int width){
 		character->bombCount = 0;
 		character->position = SpawnGet(worldServer, 1);
 		character->type = CharacterTypeEnemy;
-		character->velocity = velocity;
+		character->velocity = velocityEnemy;
+		character->keyS[rand() % KeyLength] = true;
 		ListInsert(&(worldServer->characterList), character);
 	}
 }
 
-UserServer* listFindByFunctionCharacterOwnerVariable;
-bool listFindByFunctionCharacterOwnerFunction(void* data){
-	return ((Character*)data)->owner == listFindByFunctionCharacterOwnerVariable;
+UserServer* characterFindVariable;
+bool characterFindFunction(void* data){
+	return ((Character*)data)->owner == characterFindVariable;
 }
 
 //characterFind returns Character for UserServer
 //can not be used in parallel
 Character* characterFind(UserServer* userServer){
-	listFindByFunctionCharacterOwnerVariable = userServer;
-	ListItem* listItem = ListFindItemByFunction(worldServer->characterList, listFindByFunctionCharacterOwnerFunction);
+	characterFindVariable = userServer;
+	ListItem* listItem = ListFindItemByFunction(worldServer->characterList, characterFindFunction);
 	
 	if(listItem == NULL){
 		return NULL;
@@ -102,7 +104,7 @@ Character* characterFind(UserServer* userServer){
 	return listItem->data;
 }
 
-bool keyMovementCollisionDetectObject(void* this, Object *that){
+bool keyMovementCollisionDetectObject(void* this, Object* that){
 	//player can be inside fire (it will die in this exact tick)
 	if(that->type == ObjectTypeBombFire){
 		return false;
@@ -122,7 +124,7 @@ bool keyMovementCollisionDetectObject(void* this, Object *that){
 	return true;
 }
 
-bool keyMovementCollisionDetectCharacter(void* this, Character *that){
+bool keyMovementCollisionDetectCharacter(void* this, Character* that){
 	//CharacterTypeUser is solid for CharacterTypeUser
 	//CharacterTypeEnemy is not solid for CharacterTypeUser
 	//vice versa with CharacterTypeEnemy
@@ -134,7 +136,7 @@ bool keyMovementCollisionDetectCharacter(void* this, Character *that){
 	return true;
 }
 
-//keyMovement calculates user position based on keyItem.key
+//keyMovement
 //userServer must have a character
 void keyMovement(Character* character){
 	Position positionNew = character->position;
@@ -152,7 +154,7 @@ void keyMovement(Character* character){
 	}
 
 	//collision
-	character->position = CollisionLinePositionGet(
+	positionNew = CollisionLinePositionGet(
 		worldServer,
 		character->position,
 		positionNew,
@@ -160,6 +162,19 @@ void keyMovement(Character* character){
 		keyMovementCollisionDetectObject,
 		keyMovementCollisionDetectCharacter
 	);
+
+	//enemy new one way direction
+	if(
+		character->type == CharacterTypeEnemy &&
+		PositionSame(character->position, positionNew)
+	){
+		for(int i=0; i<KeyLength; i++){
+			character->keyS[i] = false;
+		}
+		
+		character->keyS[rand() % KeyLength] = true;
+	}
+	character->position = positionNew;
 
 	//moved out from a bomb with !bombOut
 	//in one move it is not possible that it moved out from bomb then moved back again
@@ -176,7 +191,7 @@ void keyMovement(Character* character){
 	}
 }
 
-//keyBomb calculates bomb position based on keyItem.key
+//keyBomb
 void keyBomb(Character* character){
 	if(!character->keyS[KeyBomb]){
 		return;
@@ -202,6 +217,16 @@ void keyBomb(Character* character){
 	//collision
 	List* collisionObjectS = CollisionPointAllObjectGet(worldServer->objectList, positionNew, NULL, NULL);
 	List* collisionCharacterS = CollisionPointAllCharacterGet(worldServer->characterList, positionNew, character, NULL);
+
+	if(
+		collisionCharacterS->length != 0 ||
+		collisionObjectS->length != 0
+	){
+		ListDelete(collisionObjectS, NULL);
+		ListDelete(collisionCharacterS, NULL);
+		return;
+	}
+
 	ListDelete(collisionObjectS, NULL);
 	ListDelete(collisionCharacterS, NULL);
 
@@ -220,9 +245,10 @@ void keyBomb(Character* character){
 	character->bombCount--;
 }
 
-UserServer* ServerAuthCheck(char* auth){
+UserServer* ServerAuthFind(char* auth){
 	for(ListItem* item = userServerList->head; item != NULL; item = item->next){
 		//connecting user
+		//[R] this may not be happening because of mutex
 		if(((UserServer*)item->data)->auth == NULL){
 			continue;
 		}
@@ -254,6 +280,8 @@ char* ServerAuthCreate(){
 	return auth;
 }
 
+//bombExplode removes bomb and creates fire in its place
+//if object->type != ObjectTypeBomb then nothing happens
 void bombExplode(Object* object){
 	if(object->type != ObjectTypeBomb){
 		return;
@@ -298,6 +326,7 @@ void bombExplode(Object* object){
 }
 
 //clientDrawCharacterFind destroys all ObjectTypeBox and ObjectTypeCharacter if object is ObjectTypeBombFire
+//if object->type != ObjectTypeFire then nothing happens
 void fireDestroy(Object* object){
 	if(object->type != ObjectTypeBombFire){
 		return;
@@ -325,6 +354,10 @@ void fireDestroy(Object* object){
 	ListDelete(collisionCharacterS, NULL);
 }
 
+bool enemyKillCollisionDetectCharacter(void* this, Character* that){
+	return that->type == CharacterTypeEnemy;
+}
+
 //serverTickCalculate calculates new world state from current
 void serverTickCalculate(){
 	//destroy by server
@@ -343,6 +376,26 @@ void serverTickCalculate(){
 		ListRemoveItem(&(worldServer->objectList), listItemCurrent->prev, ObjectDelete);
 	}
 
+	//enemy random movement
+	//must be before character movement as that fixes bumping into wall
+	for(ListItem* item = worldServer->characterList->head; item != NULL; item = item->next){
+		Character* character = (Character*)item->data;
+		if(character->type != CharacterTypeEnemy){
+			continue;
+		}
+
+		if(rand() % RAND_MAX + 1 > RAND_MAX * enemyKeyChangePossibility){
+			continue;
+		}
+
+		//[R] key lib, random key function
+		//[R] check if 10000*enemyKeyChangePossibility is not zero
+		for(int i=0; i<KeyLength; i++){
+			character->keyS[i] = false;
+		}
+		character->keyS[rand() % KeyLength] = true;
+	}
+	
 	//character movement
 	//this should be calculated before fireDestroy() otherwise player would be in fire for 1 tick
 	//if 2 character is racing for the same spot the first in list wins
@@ -355,6 +408,34 @@ void serverTickCalculate(){
 	for(ListItem* item = worldServer->objectList->head; item != NULL; item = item->next){
 		fireDestroy(item->data);
 	}
+
+	//destroy by enemy
+	List* deathS = ListNew();
+	for(ListItem* item = worldServer->characterList->head; item != NULL; item = item->next){
+		Character* character = (Character*)item->data;
+		if(character->type != CharacterTypeUser){
+			continue;
+		}
+
+		List* collisionCharacterS = CollisionPointAllCharacterGet(
+			worldServer->characterList,
+			character->position,
+			character,
+			enemyKillCollisionDetectCharacter
+		);	
+		
+		//death
+		if(collisionCharacterS->length != 0){
+			ListInsert(&deathS, character);
+		}
+
+		ListDelete(collisionCharacterS, NULL);
+	}
+	for(ListItem* item = deathS->head; item != NULL; item = item->next){
+		ListItem* listItem = ListFindItemByPointer(worldServer->characterList, item->data);
+		ListRemoveItem(&(worldServer->characterList), listItem, CharacterDelete);
+	}
+	ListDelete(deathS, NULL);
 
 	//animate
 	for (ListItem* item = worldServer->objectList->head; item != NULL; item = item->next){
@@ -464,7 +545,7 @@ void ServerReceive(UserServer* userServerUnsafe){
 		}
 		return;
 	}
-	UserServer* userServer = ServerAuthCheck(userServerUnsafe->auth); //[R] auth may be shorther than 26
+	UserServer* userServer = ServerAuthFind(userServerUnsafe->auth); //[R] auth may be shorther than 26
 	if(userServer == NULL){
 		if(SDL_UnlockMutex(mutex) < 0){
 			SDL_Log("ServerReceive: mutex unlock: %s", SDL_GetError());
@@ -546,7 +627,7 @@ void ServerConnect(UserServer* userServerUnsafe){
 		char* auth = ServerAuthCreate();
 		
 		//id exists
-		if(ServerAuthCheck(auth) == NULL){
+		if(ServerAuthFind(auth) == NULL){
 			free(userServer->auth);
 			userServer->auth = auth;
 			break;
