@@ -240,12 +240,6 @@ void keyBomb(Character* character){
 
 UserServer* ServerAuthFind(char* auth){
 	for(ListItem* item = userServerList->head; item != NULL; item = item->next){
-		//connecting user
-		//[R] this may not be happening because of mutex
-		if(((UserServer*)item->data)->auth == NULL){
-			continue;
-		}
-
 		//timing attack safe compare
 		bool diff = false;
 		for(int i=0; i<26; i++){
@@ -307,7 +301,6 @@ void bombExplode(Object* object){
 		objectFire->position = position;
 		objectFire->type = ObjectTypeBombFire;
 		objectFire->velocity = 0;
-
 
 		ListInsert(&(worldServer->objectList), objectFire);
 	}
