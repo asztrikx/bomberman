@@ -12,6 +12,7 @@
 #include "config.h"
 #include "key.h"
 #include <stdlib.h>
+#include <stdio.h>
 
 //mutex handles all global variable which is modified in critical sections
 static SDL_mutex* mutex;
@@ -19,6 +20,7 @@ static List* userServerList;
 static WorldServer* worldServer = NULL;
 static long long tickCount = 0;
 static int tickId;
+static bool stopped = true;
 
 //WorldGenerate generates default map
 //free should be called
@@ -313,34 +315,6 @@ static void TickCalculateDestroy(){
 	}
 }
 
-//TickCalculate calculates next state from current
-static void TickCalculate(){
-	//this should be calculated first as these objects should not exists in this tick
-	TickCalculateDestroy();
-
-	//must be before character movement as that fixes bumping into wall
-	TickCalculateEnemyMovement();
-	
-	//character movement
-	//this should be calculated before TickCalculateFireDestroy() otherwise player would be in fire for 1 tick
-	//if 2 character is racing for the same spot the first in list wins
-	for(ListItem* item = worldServer->characterList->head; item != NULL; item = item->next){
-		if(((Character*)item->data)->keyS[KeyBomb]){
-			keyBomb(item->data);
-		}
-		keyMovement(item->data);
-	}
-
-	//should be before any destroy
-	TickCalculateWin();
-
-	TickCalculateFireDestroy();
-
-	TickCalculateEnemyKill();
-
-	TickCalculateAnimate();
-}
-
 //TickCalculateAnimate calculates next texture state from current
 static void TickCalculateAnimate(){
 	//animate
@@ -372,6 +346,34 @@ static void TickCalculateAnimate(){
 		character->animation.state++;
 		character->animation.state %= TextureSSCharacter[character->type]->length;
 	}
+}
+
+//TickCalculate calculates next state from current
+static void TickCalculate(){
+	//this should be calculated first as these objects should not exists in this tick
+	TickCalculateDestroy();
+
+	//must be before character movement as that fixes bumping into wall
+	TickCalculateEnemyMovement();
+	
+	//character movement
+	//this should be calculated before TickCalculateFireDestroy() otherwise player would be in fire for 1 tick
+	//if 2 character is racing for the same spot the first in list wins
+	for(ListItem* item = worldServer->characterList->head; item != NULL; item = item->next){
+		if(((Character*)item->data)->keyS[KeyBomb]){
+			KeyBombPlace(item->data, worldServer, tickCount);
+		}
+		KeyMovement(item->data, worldServer);
+	}
+
+	//should be before any destroy
+	TickCalculateWin();
+
+	TickCalculateFireDestroy();
+
+	TickCalculateEnemyKill();
+
+	TickCalculateAnimate();
 }
 
 //TickSend sends new world to connected clients
@@ -514,8 +516,6 @@ void ServerReceive(UserServer* userServerUnsafe){
 		exit(1);
 	}
 }
-
-static bool stopped = true;
 
 //ServerStop clears server module
 void ServerStop(void){

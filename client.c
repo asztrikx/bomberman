@@ -11,7 +11,6 @@
 #include "type/geometry.h"
 #include "type/array.h"
 #include "type/animation.h"
-#include "type/int.h"
 #include "config.h"
 #include "network.h"
 
@@ -37,7 +36,7 @@ static Uint32 Tick(Uint32 interval, void *param){
 }
 
 //EventKey handles movement key events
-void EventKey(SDL_Event sdl_event){
+static void EventKey(SDL_Event sdl_event){
 	if (SDL_LockMutex(mutex) != 0){
 		SDL_Log("EventKey: SDL_LockMutex: %s", SDL_GetError());
 		exit(1);
