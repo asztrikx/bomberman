@@ -188,7 +188,7 @@ int CollisionFreeCountObjectGetRecursion(WorldServer* worldServer, Position posi
 	return collisionFreeCountObject;
 }
 
-//collisionFreeCountObject returns how many square sized object-free area is reachable from (position - position % squaresize)
+//CollisionFreeCountObjectGet returns how many square sized object-free area is reachable from (position - position % squaresize)
 int CollisionFreeCountObjectGet(WorldServer* worldServer, Position position){
 	//memory alloc
 	collisionFreeCountObjectGetMemory = (bool**) malloc(worldServer->height * sizeof(bool*));
