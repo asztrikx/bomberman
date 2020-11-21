@@ -427,20 +427,188 @@ Uint32 Tick(Uint32 interval, void *param){
 	return interval;
 }
 
+void Save(){
+	FILE* file = fopen("world.save", "wt");
+
+	//height
+	fprintf(file, "%d\n", worldServer->height);
+
+	//width
+	fprintf(file, "%d\n", worldServer->width);
+
+	//tickCount
+	fprintf(file, "%lld\n", tickCount);
+
+	//worldServer->characterList->length
+	fprintf(file, "%d\n", worldServer->characterList->length);
+
+	//worldServer->characterList
+	for(ListItem* item = worldServer->characterList->head; item != NULL; item = item->next){
+		Character* character = item->data;
+
+		//do not save things not handled by server
+		if(character->owner != NULL){
+			continue;
+		}
+
+		fprintf(file, "%d\n", character->position.y);
+		fprintf(file, "%d\n", character->position.x);
+		fprintf(file, "%d\n", character->type);
+		fprintf(file, "%d\n", character->velocity);
+		fprintf(file, "%d\n", character->bombCount);
+
+		//no use saving these
+		//fprintf(file, "", character->animation);
+		//fprintf(file, "", character->keyS);
+	}
+
+	//worldServer->objectList->length
+	fprintf(file, "%d\n", worldServer->objectList->length);
+
+	//worldServer->objectList
+	for(ListItem* item = worldServer->objectList->head; item != NULL; item = item->next){
+		Object* object = item->data;
+
+		//do not save things not handled by server
+		if(object->owner != NULL){
+			continue;
+		}
+
+		fprintf(file, "%d\n", object->position.y);
+		fprintf(file, "%d\n", object->position.x);
+		fprintf(file, "%d\n", object->type);
+		fprintf(file, "%lld\n", object->created);
+		fprintf(file, "%lld\n", object->destroy);
+		fprintf(file, "%d\n", object->velocity);
+		fprintf(file, "%d\n", object->bombOut ? 1 : 0);
+
+		//no use saving these
+		//fprintf(file, """, object->animation);
+	}
+
+	fclose(file);
+}
+
+void Load(){
+	if(worldServer != NULL){
+		WorldServerDelete(worldServer);
+	}
+	worldServer = WorldServerNew();
+
+	FILE* file = fopen("world.save", "rt");
+
+	//height
+	fscanf(file, "%d\n", &worldServer->height);
+
+	//width
+	fscanf(file, "%d\n", &worldServer->width);
+
+	//tickCount
+	fscanf(file, "%lld\n", &tickCount);
+
+	//worldServer->characterList->length
+	int characterListLength;
+	fscanf(file, "%d\n", &characterListLength);
+
+	//worldServer->characterList
+	for(int i=0; i < characterListLength; i++){
+		Character* character = CharacterNew();
+
+		fscanf(file, "%d\n", &character->position.y);
+		fscanf(file, "%d\n", &character->position.x);
+		int characterType;
+		fscanf(file, "%d\n", &characterType);
+		character->type = (CharacterType)characterType;
+		fscanf(file, "%d\n", &character->velocity);
+		fscanf(file, "%d\n", &character->bombCount);
+
+		//not saved
+		//fscanf(file, "", &character->animation);
+		//fscanf(file, "", &character->keyS);
+
+		ListInsert(&worldServer->characterList, character);
+	}
+
+	//worldServer->objectList->length
+	int objectListLength;
+	fscanf(file, "%d\n", &objectListLength);
+
+	//worldServer->objectList
+	for(int i=0; i < objectListLength; i++){
+		Object* object = ObjectNew();
+
+		fscanf(file, "%d\n", &object->position.y);
+		fscanf(file, "%d\n", &object->position.x);
+		int objectType;
+		fscanf(file, "%d\n", &objectType);
+		object->type = (ObjectType)objectType;
+		fscanf(file, "%lld\n", &object->created);
+		fscanf(file, "%lld\n", &object->destroy);
+		fscanf(file, "%d\n", &object->velocity);
+		int bombout;
+		fscanf(file, "%d\n", &bombout);
+		object->bombOut = bombout == 1;
+
+		//not saved
+		//fscanf(file, """, &object->animation);
+
+		ListInsert(&worldServer->objectList, object);
+
+		//exit set
+		if(object->type == ObjectTypeExit){
+			worldServer->exit = object;
+		}
+	}
+
+	fclose(file);
+}
+
+//EventKey handles WorldServer saving
+static int EventKey(void* data, SDL_Event* sdl_event){
+	if(
+		sdl_event->type != SDL_KEYDOWN ||
+		sdl_event->key.keysym.sym != SDLK_q
+	){
+		return 0;
+	}
+
+	if (SDL_LockMutex(mutex) != 0){
+		SDL_Log("EventKey: SDL_LockMutex: %s", SDL_GetError());
+		exit(1);
+	}
+
+	Save();
+
+	if(SDL_UnlockMutex(mutex) < 0){
+		SDL_Log("EventKey: mutex unlock: %s", SDL_GetError());
+		exit(1);
+	}
+
+	return 0;
+}
+
 //ServerStart generates world, start accepting connections, starts ticking
-void ServerStart(void){
+void ServerStart(bool load){
 	stopped = false;
 
-	//world generate
-	WorldGenerate(worldHeight, worldWidth); //not critical section
+	//world set
+	if(!load){
+		WorldGenerate(worldHeight, worldWidth); //not critical section
+	} else {
+		Load();
+	}
+
 	userServerList = ListNew();
 
 	//mutex init
 	mutex = SDL_CreateMutex();
 	if (mutex == NULL){
-		SDL_Log("mutex create: %s", SDL_GetError());
+		SDL_Log("ServerStart: mutex create: %s", SDL_GetError());
 		exit(1);
 	}
+
+	//key press
+	SDL_AddEventWatch(EventKey, NULL);
 
 	//network start
 	NetworkServerStart();

@@ -36,14 +36,21 @@ static Uint32 Tick(Uint32 interval, void *param){
 }
 
 //EventKey handles movement key events
-static void EventKey(SDL_Event sdl_event){
+static int EventKey(void* data, SDL_Event* sdl_event){
+	if(
+		sdl_event->type != SDL_KEYDOWN &&
+		sdl_event->type != SDL_KEYUP
+	){
+		return 0;
+	}
+
 	if (SDL_LockMutex(mutex) != 0){
 		SDL_Log("EventKey: SDL_LockMutex: %s", SDL_GetError());
 		exit(1);
 	}
 
-	bool activated = sdl_event.type == SDL_KEYDOWN;
-	switch (sdl_event.key.keysym.sym){
+	bool activated = sdl_event->type == SDL_KEYDOWN;
+	switch (sdl_event->key.keysym.sym){
 		case SDLK_w:
 			userClient->keyS[KeyUp] = activated;
 			break;
@@ -65,6 +72,8 @@ static void EventKey(SDL_Event sdl_event){
 		SDL_Log("EventKey: mutex unlock: %s", SDL_GetError());
 		exit(1);
 	}
+
+	return 0;
 }
 
 //ClientConnect connects to a server
@@ -81,12 +90,7 @@ void ClientConnect(void){
 	}
 
 	//key press
-	SDL_Event sdl_event;
-	while (SDL_WaitEvent(&sdl_event) && sdl_event.type != SDL_QUIT) {
-		if(sdl_event.type == SDL_KEYDOWN || sdl_event.type == SDL_KEYUP){
-			EventKey(sdl_event);
-		}
-	}
+	SDL_AddEventWatch(EventKey, NULL);
 }
 
 //DrawCharacterFind find CharacterYou

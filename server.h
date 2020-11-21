@@ -5,7 +5,7 @@
 
 void ServerReceive(UserServer* userServerUnsafe);
 void ServerConnect(UserServer* userServerUnsafe);
-void ServerStart(void);
+void ServerStart(bool load);
 void ServerStop(void);
 
 #endif
