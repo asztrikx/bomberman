@@ -84,7 +84,7 @@ static void WorldGenerate(int height, int width){
 	//enemy generate randomly
 	for(int i=0; i < (int)(enemyRatio * collisionFreeCountObject); i++){
 		Character* character = CharacterNew();
-		character->position = SpawnGet(worldServer, 1);
+		character->position = SpawnGet(worldServer, 3);
 		character->type = CharacterTypeEnemy;
 		character->velocity = velocityEnemy;
 		KeyMovementRandom(character);
