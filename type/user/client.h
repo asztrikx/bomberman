@@ -8,7 +8,6 @@
 typedef struct{
 	bool keyS[KeyLength];
 	char* name;
-	//List* ablityList;
 	char* auth;
 } UserClient;
 

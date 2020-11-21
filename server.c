@@ -10,6 +10,7 @@
 #include "type/character.h"
 #include "type/key.h"
 #include "config.h"
+#include "key.h"
 #include <stdlib.h>
 
 //mutex handles all global variable which is modified in critical sections
@@ -19,16 +20,16 @@ static WorldServer* worldServer = NULL;
 static long long tickCount = 0;
 static int tickId;
 
-//worldGenerate generates default map
+//WorldGenerate generates default map
 //free should be called
-void worldGenerate(int height, int width){
+static void WorldGenerate(int height, int width){
 	if(
 		height % 2 != 1 ||
 		width % 2 != 1 ||
 		height < 5 ||
 		width < 5
 	){
-		SDL_Log("worldGenerate: World size is malformed");
+		SDL_Log("WorldGenerate: World size is malformed");
 		exit(1);
 	}
 
@@ -84,21 +85,23 @@ void worldGenerate(int height, int width){
 		character->position = SpawnGet(worldServer, 1);
 		character->type = CharacterTypeEnemy;
 		character->velocity = velocityEnemy;
-		character->keyS[rand() % KeyLength] = true;
+		KeyMovementRandom(character);
 		ListInsert(&(worldServer->characterList), character);
 	}
 }
 
 UserServer* characterFindVariable;
-bool characterFindFunction(void* data){
+
+//CharacterFindFunction is a helper function of CharacterFind
+static bool CharacterFindFunction(void* data){
 	return ((Character*)data)->owner == characterFindVariable;
 }
 
-//characterFind returns Character for UserServer
+//CharacterFind returns Character for UserServer
 //can not be used in parallel
-Character* characterFind(UserServer* userServer){
+static Character* CharacterFind(UserServer* userServer){
 	characterFindVariable = userServer;
-	ListItem* listItem = ListFindItemByFunction(worldServer->characterList, characterFindFunction);
+	ListItem* listItem = ListFindItemByFunction(worldServer->characterList, CharacterFindFunction);
 	
 	if(listItem == NULL){
 		return NULL;
@@ -106,139 +109,8 @@ Character* characterFind(UserServer* userServer){
 	return listItem->data;
 }
 
-bool keyMovementCollisionDetectObject(void* this, Object* that){
-	return
-		that->type == ObjectTypeWall ||
-		that->type == ObjectTypeBox || (
-			that->type == ObjectTypeBomb && (
-				that->owner != (Character*)this ||
-				that->bombOut
-			)
-		);
-}
-
-bool keyMovementCollisionDetectCharacter(void* this, Character* that){
-	//CharacterTypeUser is solid for CharacterTypeUser
-	//CharacterTypeEnemy is not solid for CharacterTypeUser
-	//vice versa with CharacterTypeEnemy
-	//so only same type character is solid
-	if(that->type != ((Character*)this)->type){
-		return false;
-	}
-
-	return true;
-}
-
-//keyMovement
-//userServer must have a character
-void keyMovement(Character* character){
-	Position positionNew = character->position;
-	if(character->keyS[KeyUp]){
-		positionNew.y -= character->velocity;
-	}
-	if(character->keyS[KeyLeft]){
-		positionNew.x -= character->velocity;
-	}
-	if(character->keyS[KeyDown]){
-		positionNew.y += character->velocity;
-	}
-	if(character->keyS[KeyRight]){
-		positionNew.x += character->velocity;
-	}
-
-	//collision
-	positionNew = CollisionLinePositionGet(
-		worldServer,
-		character->position,
-		positionNew,
-		character,
-		keyMovementCollisionDetectObject,
-		keyMovementCollisionDetectCharacter
-	);
-
-	//enemy new one way direction
-	if(
-		character->type == CharacterTypeEnemy &&
-		PositionSame(character->position, positionNew)
-	){
-		for(int i=0; i<KeyLength; i++){
-			character->keyS[i] = false;
-		}
-		
-		character->keyS[rand() % KeyLength] = true;
-	}
-	character->position = positionNew;
-
-	//moved out from a bomb with !bombOut
-	//in one move it is not possible that it moved out from bomb then moved back again
-	for(ListItem* item = worldServer->objectList->head; item != NULL; item = item->next){
-		Object* object = (Object*)item->data;
-		if(
-			object->type == ObjectTypeBomb &&
-			object->owner == character &&
-			!object->bombOut &&
-			!CollisionPoint(character->position, object->position)
-		){
-			object->bombOut = true;
-		}
-	}
-}
-
-//keyBomb
-void keyBomb(Character* character){
-	if(!character->keyS[KeyBomb]){
-		return;
-	}
-
-	//bomb available
-	if(character->bombCount == 0){
-		return;
-	}
-
-	Position positionNew = character->position;
-
-	//position
-	positionNew.y -= positionNew.y % squaresize;
-	positionNew.x -= positionNew.x % squaresize;
-	if (character->position.y % squaresize > squaresize / 2){
-		positionNew.y += squaresize;
-	}
-	if (character->position.x % squaresize > squaresize / 2){
-		positionNew.x += squaresize;
-	}
-
-	//collision
-	List* collisionObjectS = CollisionPointAllObjectGet(worldServer->objectList, positionNew, NULL, NULL);
-	List* collisionCharacterS = CollisionPointAllCharacterGet(worldServer->characterList, positionNew, character, NULL);
-
-	if(
-		collisionCharacterS->length != 0 ||
-		collisionObjectS->length != 0
-	){
-		ListDelete(collisionObjectS, NULL);
-		ListDelete(collisionCharacterS, NULL);
-		return;
-	}
-
-	ListDelete(collisionObjectS, NULL);
-	ListDelete(collisionCharacterS, NULL);
-
-	//bomb insert
-	Object* object = ObjectNew();
-	object->created = tickCount;
-	object->destroy = tickCount + 2 * tickSecond;
-	object->position = positionNew;
-	object->type = ObjectTypeBomb;
-	object->velocity = 0;
-	object->bombOut = false;
-	object->owner = character;
-	ListInsert(&(worldServer->objectList), object);
-
-	//bomb decrease
-	character->bombCount--;
-}
-
-UserServer* ServerAuthFind(char* auth){
+//AuthFind returns UserServer with that auth or NULL if does not exists
+static UserServer* AuthFind(char* auth){
 	for(ListItem* item = userServerList->head; item != NULL; item = item->next){
 		//timing attack safe compare
 		bool diff = false;
@@ -255,9 +127,8 @@ UserServer* ServerAuthFind(char* auth){
 	return NULL;
 }
 
-//ServerAuthCreate creates a 26 character long auth key
-//return should be free'd by caller
-char* ServerAuthCreate(){
+//AuthCreate creates a 26 character long auth key
+static char* AuthCreate(){
 	char* auth = (char*) malloc((26 + 1) * sizeof(char));
 	for(int i=0; i<26; i++){
 		auth[i] = rand() % ('Z' - 'A' + 1) + 'A';
@@ -267,9 +138,9 @@ char* ServerAuthCreate(){
 	return auth;
 }
 
-//bombExplode removes bomb and creates fire in its place
+//TickCalculateDestroyBomb removes bomb and creates fire in its place
 //if object->type != ObjectTypeBomb then nothing happens
-void bombExplode(Object* object){
+static void TickCalculateDestroyBomb(Object* object){
 	//fire inserts
 	int directionX[] = {0, 1, -1, 0, 0};
 	int directionY[] = {0, 0, 0, 1, -1};
@@ -311,8 +182,8 @@ void bombExplode(Object* object){
 	}
 }
 
-//serverTickCalculateFireDestroy makes fires destroys all ObjectTypeBox and all Character in collision
-void serverTickCalculateFireDestroy(){
+//TickCalculateFireDestroy makes fires destroys all ObjectTypeBox and all Character in collision
+static void TickCalculateFireDestroy(){
 	for(ListItem* item = worldServer->objectList->head; item != NULL; item = item->next){
 		Object* object = (Object*)item->data;
 		if(object->type != ObjectTypeBombFire){
@@ -351,11 +222,13 @@ void serverTickCalculateFireDestroy(){
 	}
 }
 
-bool enemyKillCollisionDetect(void* this, Character* that){
+//TickCalculateEnemyKillCollisionDetect is a helper function of TickCalculateEnemyKill
+static bool TickCalculateEnemyKillCollisionDetect(void* this, Character* that){
 	return that->type == CharacterTypeEnemy;
 }
 
-void serverTickCalculateWin(){
+//TickCalculateWin checks if any CharacterTypeUser if in a winning state and removes them if so
+static void TickCalculateWin(){
 	List* collisionCharacterS = CollisionPointAllCharacterGet(worldServer->characterList, worldServer->exit->position, NULL, NULL);
 	for(ListItem* item = collisionCharacterS->head; item != NULL; item = item->next){
 		Character* character = (Character*)item->data;
@@ -374,7 +247,8 @@ void serverTickCalculateWin(){
 	ListDelete(collisionCharacterS, NULL);
 }
 
-void serverTickCalculateEnemyKill(){
+//TickCalculateEnemyKill checks if any CharacterTypeUser is colliding with CharacterTypeEnemy and kills them if so
+static void TickCalculateEnemyKill(){
 	List* deathS = ListNew();
 	for(ListItem* item = worldServer->characterList->head; item != NULL; item = item->next){
 		Character* character = (Character*)item->data;
@@ -386,7 +260,7 @@ void serverTickCalculateEnemyKill(){
 			worldServer->characterList,
 			character->position,
 			character,
-			enemyKillCollisionDetect
+			TickCalculateEnemyKillCollisionDetect
 		);
 
 		//death
@@ -403,7 +277,8 @@ void serverTickCalculateEnemyKill(){
 	ListDelete(deathS, NULL);
 }
 
-void serverTickCalculateEnemyMovement(){
+//TickCalculateEnemyMovement randomly creates a new random direction for CharacterTypeEnemys
+static void TickCalculateEnemyMovement(){
 	for(ListItem* item = worldServer->characterList->head; item != NULL; item = item->next){
 		Character* character = (Character*)item->data;
 		if(character->type != CharacterTypeEnemy){
@@ -414,15 +289,13 @@ void serverTickCalculateEnemyMovement(){
 			continue;
 		}
 
-		//[R] key lib, random key function
-		for(int i=0; i<KeyLength; i++){
-			character->keyS[i] = false;
-		}
-		character->keyS[rand() % KeyLength] = true;
+		KeyMovementRandom(character);
 	}
 }
 
-void serverTickCalculateDestroy(){
+//TickCalculateDestroy removes items where .destroy == tickCount
+//destroy hooks also added here
+static void TickCalculateDestroy(){
 	ListItem* listItemCurrent = worldServer->objectList->head;
 	while(listItemCurrent != NULL){
 		if(tickCount != ((Object*)listItemCurrent->data)->destroy){
@@ -431,7 +304,7 @@ void serverTickCalculateDestroy(){
 		}
 
 		if(((Object*)listItemCurrent->data)->type == ObjectTypeBomb){
-			bombExplode(listItemCurrent->data);
+			TickCalculateDestroyBomb(listItemCurrent->data);
 		}
 
 		listItemCurrent = listItemCurrent->next;
@@ -440,31 +313,36 @@ void serverTickCalculateDestroy(){
 	}
 }
 
-//serverTickCalculate calculates new world state from current
-void serverTickCalculate(){
+//TickCalculate calculates next state from current
+static void TickCalculate(){
 	//this should be calculated first as these objects should not exists in this tick
-	serverTickCalculateDestroy();
+	TickCalculateDestroy();
 
 	//must be before character movement as that fixes bumping into wall
-	serverTickCalculateEnemyMovement();
+	TickCalculateEnemyMovement();
 	
 	//character movement
-	//this should be calculated before fireDestroy() otherwise player would be in fire for 1 tick
+	//this should be calculated before TickCalculateFireDestroy() otherwise player would be in fire for 1 tick
 	//if 2 character is racing for the same spot the first in list wins
 	for(ListItem* item = worldServer->characterList->head; item != NULL; item = item->next){
-		keyBomb(item->data);
+		if(((Character*)item->data)->keyS[KeyBomb]){
+			keyBomb(item->data);
+		}
 		keyMovement(item->data);
 	}
 
 	//should be before any destroy
-	serverTickCalculateWin();
+	TickCalculateWin();
 
-	serverTickCalculateFireDestroy();
+	TickCalculateFireDestroy();
 
-	serverTickCalculateEnemyKill();
+	TickCalculateEnemyKill();
+
+	TickCalculateAnimate();
 }
 
-void serverTickAnimate(){
+//TickCalculateAnimate calculates next texture state from current
+static void TickCalculateAnimate(){
 	//animate
 	for (ListItem* item = worldServer->objectList->head; item != NULL; item = item->next){
 		Object* object = (Object*)item->data;
@@ -496,26 +374,26 @@ void serverTickAnimate(){
 	}
 }
 
-//serverTickSend sends new world to connected clients
-void serverTickSend(){
+//TickSend sends new world to connected clients
+static void TickSend(){
 	for(ListItem* item = userServerList->head; item != NULL; item = item->next){
 		//remove exit if not seeable
 		List* collisionObjectS = CollisionPointAllObjectGet(worldServer->objectList, worldServer->exit->position, worldServer->exit, NULL);
 		Object* exit = worldServer->exit;
 		if(collisionObjectS->length != 0){
-			//networkSendClient will remove it from list
+			//NetworkSendClient will remove it from list
 			worldServer->exit = NULL;
 		}
 		ListDelete(collisionObjectS, NULL);
 		
 		//alter user character to be identifiable
-		Character* character = characterFind((UserServer*)item->data);
+		Character* character = CharacterFind((UserServer*)item->data);
 		if(character != NULL){
 			character->type = CharacterTypeYou;	
 		}
 
 		//send
-		networkSendClient(worldServer, (UserServer*)item->data);
+		NetworkSendClient(worldServer, (UserServer*)item->data);
 
 		//remove character alter
 		if(character != NULL){
@@ -527,21 +405,19 @@ void serverTickSend(){
 	}
 }
 
-//serverTick calculates new frame, notifies users
-Uint32 serverTick(Uint32 interval, void *param){
+//Tick calculates new frame, notifies users
+Uint32 Tick(Uint32 interval, void *param){
 	if(SDL_LockMutex(mutex) != 0){
-		SDL_Log("serverTick: SDL_LockMutex: %s", SDL_GetError());
+		SDL_Log("Tick: SDL_LockMutex: %s", SDL_GetError());
 		exit(1);
 	}
 	
-	serverTickCalculate();
+	TickCalculate();
 
-	serverTickAnimate();
-
-	serverTickSend();
+	TickSend();
 
 	if(SDL_UnlockMutex(mutex) < 0){
-		SDL_Log("serverTick: mutex unlock: %s", SDL_GetError());
+		SDL_Log("Tick: mutex unlock: %s", SDL_GetError());
 		exit(1);
 	}
 
@@ -554,7 +430,7 @@ void ServerStart(void){
 	stopped = false;
 
 	//world generate
-	worldGenerate(worldHeight, worldWidth); //not critical section
+	WorldGenerate(worldHeight, worldWidth); //not critical section
 	userServerList = ListNew();
 
 	//mutex init
@@ -565,10 +441,10 @@ void ServerStart(void){
 	}
 
 	//network start
-	networkServerStart();
+	NetworkServerStart();
 
 	//tick start: world calc, connected user update
-	tickId = SDL_AddTimer(tickRate, serverTick, NULL);
+	tickId = SDL_AddTimer(tickRate, Tick, NULL);
 	if (tickId == 0){
 		SDL_Log("SDL_AddTimer: %s", SDL_GetError());
 		exit(1);
@@ -600,7 +476,7 @@ void ServerReceive(UserServer* userServerUnsafe){
 	}
 	//auth's length validation
 	//-
-	UserServer* userServer = ServerAuthFind(userServerUnsafe->auth);
+	UserServer* userServer = AuthFind(userServerUnsafe->auth);
 	if(userServer == NULL){
 		if(SDL_UnlockMutex(mutex) < 0){
 			SDL_Log("ServerReceive: mutex unlock: %s", SDL_GetError());
@@ -608,7 +484,7 @@ void ServerReceive(UserServer* userServerUnsafe){
 		}
 		return;
 	}
-	Character* character = characterFind(userServer);
+	Character* character = CharacterFind(userServer);
 
 	//alive
 	if(character == NULL){
@@ -654,11 +530,11 @@ void ServerStop(void){
 		exit(1);
 	}
 
-	//need to be called before networkServerStop as incoming message may already be coming which
+	//need to be called before NetworkServerStop as incoming message may already be coming which
 	//could get stuck if SDL_DestroyMutex happens before SDL_LockMutex
 	stopped = true;
 
-	networkServerStop();
+	NetworkServerStop();
 
 	//free worldServer
 	WorldServerDelete(worldServer);
@@ -688,10 +564,10 @@ void ServerConnect(UserServer* userServerUnsafe){
 
 	//id generate
 	while (true){
-		char* auth = ServerAuthCreate();
+		char* auth = AuthCreate();
 		
 		//id exists
-		if(ServerAuthFind(auth) == NULL){
+		if(AuthFind(auth) == NULL){
 			free(userServer->auth);
 			userServer->auth = auth;
 			break;

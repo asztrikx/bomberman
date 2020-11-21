@@ -65,9 +65,12 @@ ListItem* ListFindItemByFunction(List* list, bool (*func)(void*)){
 }
 
 void* listFindItemByPointerVariable;
+
+//listFindItemByPointerFunction is a helper function of ListFindItemByPointer
 bool listFindItemByPointerFunction(void* data){
 	return data == listFindItemByPointerVariable;
 }
+
 //ListFindItemByPointer returns first ListItem where ListItem->data == data
 //can not be run in parallel
 ListItem* ListFindItemByPointer(List* list, void* data){
@@ -76,7 +79,6 @@ ListItem* ListFindItemByPointer(List* list, void* data){
 }
 
 //ListNew creates a new List
-//it must be freed by caller
 List* ListNew(){
 	List* list = (List*) malloc(sizeof(List));
 	list->head = NULL;

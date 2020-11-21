@@ -5,24 +5,30 @@
 #include "client.h"
 
 bool serverStop = true;
-void networkServerStop(void){
+bool clientStop = true;
+
+//NetworkServerStop disables incoming requests
+void NetworkServerStop(void){
 	serverStop = true;
 }
-void networkServerStart(void){
+
+//NetworkServerStart enables incoming requests
+void NetworkServerStart(void){
 	serverStop = false;
 }
 
-bool clientStop = true;
-void networkClientStop(void){
+//NetworkClientStop disables incoming requests
+void NetworkClientStop(void){
 	clientStop = true;
 }
-void networkClientStart(void){
+
+//NetworkClientStart enables incoming requests
+void NetworkClientStart(void){
 	clientStop = false;
 }
 
-//networkSendClient send worldServer to client as WorldClient
-//worldServer is not locked with mutex
-void networkSendClient(WorldServer* worldServer, UserServer* userServer){
+//NetworkSendClient send worldServer to client as WorldClient
+void NetworkSendClient(WorldServer* worldServer, UserServer* userServer){
 	WorldClient* worldClient = WorldClientNew();
 
 	//gamestate
@@ -71,8 +77,8 @@ void networkSendClient(WorldServer* worldServer, UserServer* userServer){
 	WorldClientDelete(worldClient);
 }
 
-//networkSendServer send userClient to server as UserServer
-void networkSendServer(UserClient* userClient){
+//NetworkSendServer send userClient to server as UserServer
+void NetworkSendServer(UserClient* userClient){
 	//create userServer
 	UserServer* userServer = UserServerNew();
 	strcpy(userServer->auth, userClient->auth);
@@ -90,8 +96,8 @@ void networkSendServer(UserClient* userClient){
 	UserServerDelete(userServer);
 }
 
-//networkConnectServer client request to server to create connection
-void networkConnectServer(UserClient* userClient){
+//NetworkConnectServer client request to server to create connection
+void NetworkConnectServer(UserClient* userClient){
 	//copy
 	UserServer* userServer = UserServerNew();
 	strcpy(userServer->name, userClient->name);

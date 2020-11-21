@@ -3,7 +3,6 @@
 #include <stdio.h>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
-#include <SDL2/SDL_ttf.h>
 #include "config.h"
 #include "type/array.h"
 #include "type/object.h"
@@ -16,10 +15,9 @@ Array** TextureSSObject;
 int TextureSSLengthObject;
 Array** TextureSSCharacter;
 int TextureSSLengthCharacter;
-int* DelaySObject;
-int* DelaySCharacter;
 
-void sdlResourceListLoadObject(void){
+//SDLResourceListLoadObject loads resources related to objects into TextureSSObject
+static void SDLResourceListLoadObject(void){
 	ObjectType objectTypeS[] = {
 		ObjectTypeBomb,
 		ObjectTypeBombFire,
@@ -72,7 +70,8 @@ void sdlResourceListLoadObject(void){
 	}
 }
 
-void sdlResourceListLoadCharacter(void){
+//SDLResourceListLoadCharacter loads resources related to characters TextureSSCharacter
+static void SDLResourceListLoadCharacter(void){
 	CharacterType characterTypeS[] = {
 		CharacterTypeUser,
 		CharacterTypeYou,
@@ -115,17 +114,13 @@ void sdlResourceListLoadCharacter(void){
 	}
 }
 
+//SDLInit loads SDL modules
 void SDLInit(void){
 	//init
 	if (SDL_Init(SDL_INIT_EVERYTHING) < 0) {
 		SDL_Log("sdl init: %s", SDL_GetError());
 		exit(1);
 	}
-
-	/*if (TTF_Init() < 0) {
-		SDL_Log("sdl init: %s", SDL_GetError());
-		exit(1);
-	}*/
 
 	//window
 	SDLWindow = SDL_CreateWindow("alt", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, windowWidth, windowHeight, 0);
@@ -142,24 +137,25 @@ void SDLInit(void){
 	}
 	SDL_RenderClear(SDLRenderer);
 
-	sdlResourceListLoadObject();
-	sdlResourceListLoadCharacter();
+	SDLResourceListLoadObject();
+	SDLResourceListLoadCharacter();
 }
 
-void sdlTextureDelete(void* texture){
+//SDLTextureDelete is a helper function of SDLTextureDelete
+static void SDLTextureDelete(void* texture){
 	SDL_DestroyTexture(texture);
 }
 
+//SDLDestroy unloads SDL modules
 void SDLDestroy(void){
 	for(int i=0; i<TextureSSLengthObject; i++){
-		ArrayDelete(TextureSSObject[i], sdlTextureDelete);
+		ArrayDelete(TextureSSObject[i], SDLTextureDelete);
 	}
 	for(int i=0; i<TextureSSLengthCharacter; i++){
-		ArrayDelete(TextureSSCharacter[i], sdlTextureDelete);
+		ArrayDelete(TextureSSCharacter[i], SDLTextureDelete);
 	}
 	free(TextureSSObject);
 	free(TextureSSCharacter);
 
-	//TTF_Quit();
 	SDL_Quit();
 }

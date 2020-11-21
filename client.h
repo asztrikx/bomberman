@@ -3,7 +3,6 @@
 
 #include "type/world/client.h"
 
-void ClientEventKey(SDL_Event sdl_event);
 void ClientConnect(void);
 void ClientReceive(WorldClient* worldCopy);
 void ClientStart(void);

@@ -149,7 +149,8 @@ Position CollisionLinePositionGet(
 }
 
 bool** collisionFreeCountObjectGetMemory;
-int collisionFreeCountObjectGetRecursion(WorldServer* worldServer, Position positionCompress){
+//CollisionFreeCountObjectGetRecursion is a helper function of CollisionFreeCountObjectGet
+int CollisionFreeCountObjectGetRecursion(WorldServer* worldServer, Position positionCompress){
 	Position position;
 	position.y = positionCompress.y * squaresize;
 	position.x = positionCompress.x * squaresize;
@@ -181,7 +182,7 @@ int collisionFreeCountObjectGetRecursion(WorldServer* worldServer, Position posi
 			.y = positionCompress.y + directionY[i],
 			.x = positionCompress.x + directionX[i],
 		};
-		collisionFreeCountObject += collisionFreeCountObjectGetRecursion(worldServer, positionCompressNew);
+		collisionFreeCountObject += CollisionFreeCountObjectGetRecursion(worldServer, positionCompressNew);
 	}
 
 	return collisionFreeCountObject;
@@ -200,7 +201,7 @@ int CollisionFreeCountObjectGet(WorldServer* worldServer, Position position){
 	Position positionCompress;
 	positionCompress.y = position.y / squaresize;
 	positionCompress.x = position.x / squaresize;
-	int count = collisionFreeCountObjectGetRecursion(worldServer, positionCompress);
+	int count = CollisionFreeCountObjectGetRecursion(worldServer, positionCompress);
 
 	//memory free
 	free(collisionFreeCountObjectGetMemory[0]);
@@ -218,7 +219,7 @@ Position SpawnGet(WorldServer* worldServer, int collisionFreeCountObjectMin){
 			RAND_MAX + 1 < worldServer->width
 		)
 	){
-		SDL_Log("worldGenerate: map is too big");
+		SDL_Log("WorldGenerate: map is too big");
 		exit(1);
 	}
 

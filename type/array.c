@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <math.h>
 
+//ArrayNew creates a new Array
 Array* ArrayNew(size_t size){
 	Array* array = (Array*) malloc(sizeof(Array));
 	array->length = 0;
@@ -12,6 +13,7 @@ Array* ArrayNew(size_t size){
 	return array;
 }
 
+//ArrayInsert insert element into the last position of Array
 void ArrayInsert(Array* array, void* value, size_t size){
 	if(array->length == array->capacity){
 		//dataNew
@@ -30,6 +32,7 @@ void ArrayInsert(Array* array, void* value, size_t size){
 	array->length++;
 }
 
+//ArrayDelete frees Array
 void ArrayDelete(Array* array, void(*dataFree)(void*)){
 	if(dataFree != NULL){
 		for(int i=0; i < array->length; i++){

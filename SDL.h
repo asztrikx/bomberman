@@ -10,8 +10,6 @@ extern Array** TextureSSObject;
 extern int TextureSSLengthObject;
 extern Array** TextureSSCharacter;
 extern int TextureSSLengthCharacter;
-extern int SDLWindowHeight;
-extern int SDLWindowWidth;
 void SDLInit(void);
 void SDLDestroy(void);
 

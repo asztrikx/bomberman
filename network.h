@@ -4,12 +4,12 @@
 #include "type/user/client.h"
 #include "type/world/server.h"
 
-void networkServerStop(void);
-void networkServerStart(void);
-void networkClientStop(void);
-void networkClientStart(void);
-void networkSendClient(WorldServer* worldServer, UserServer* userServer);
-void networkSendServer(UserClient* userClient);
-void networkConnectServer(UserClient* userClient);
+void NetworkServerStop(void);
+void NetworkServerStart(void);
+void NetworkClientStop(void);
+void NetworkClientStart(void);
+void NetworkSendClient(WorldServer* worldServer, UserServer* userServer);
+void NetworkSendServer(UserClient* userClient);
+void NetworkConnectServer(UserClient* userClient);
 
 #endif
