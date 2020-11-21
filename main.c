@@ -6,7 +6,9 @@
 #include "time.h"
 
 int main(int argc, char *argv[]) {
-	srand(time(0)); //[R] better seed
+	//secure seed generation
+	//-
+	srand(time(0));
 
 	//local
 	if(argc < 2){

@@ -326,7 +326,9 @@ void serverTickCalculateFireDestroy(){
 				ListItem* listItem = ListFindItemByPointer(worldServer->objectList, item->data);
 				ListRemoveItem(&(worldServer->objectList), listItem, ObjectDelete);
 			} else if(((Object*)item->data)->type == ObjectTypeBomb){
-				//bombExplode(objectItemCurrent->object); [R]
+				//chain bomb explosion
+				//-
+				//bombExplode(objectItemCurrent->object);
 			}
 		}
 		ListDelete(collisionObjectS, NULL);
@@ -413,7 +415,6 @@ void serverTickCalculateEnemyMovement(){
 		}
 
 		//[R] key lib, random key function
-		//[R] check if 10000*enemyKeyChangePossibility is not zero
 		for(int i=0; i<KeyLength; i++){
 			character->keyS[i] = false;
 		}
@@ -550,6 +551,8 @@ Uint32 serverTick(Uint32 interval, void *param){
 
 //ServerStart generates world, start accepting connections, starts ticking
 void ServerStart(void){
+	stopped = false;
+
 	//world generate
 	worldGenerate(worldHeight, worldWidth); //not critical section
 	userServerList = ListNew();
@@ -575,13 +578,19 @@ void ServerStart(void){
 //ServerReceive gets updates from users
 //userServerUnsafe is not used after return
 void ServerReceive(UserServer* userServerUnsafe){
+	if(stopped){
+		return;
+	}
+
 	if (SDL_LockMutex(mutex) != 0){
 		SDL_Log("ServerReceive: SDL_LockMutex: %s", SDL_GetError());
 		exit(1);
 	}
 
 	//auth validate
-	int length = strnlen(userServerUnsafe->auth, 26 + 1); //[R] strnlen may overindex
+	//auth's length validation
+	//-
+	int length = strnlen(userServerUnsafe->auth, 26 + 1);
 	if(length != 26){
 		if(SDL_UnlockMutex(mutex) < 0){
 			SDL_Log("ServerReceive: mutex unlock: %s", SDL_GetError());
@@ -589,7 +598,9 @@ void ServerReceive(UserServer* userServerUnsafe){
 		}
 		return;
 	}
-	UserServer* userServer = ServerAuthFind(userServerUnsafe->auth); //[R] auth may be shorther than 26
+	//auth's length validation
+	//-
+	UserServer* userServer = ServerAuthFind(userServerUnsafe->auth);
 	if(userServer == NULL){
 		if(SDL_UnlockMutex(mutex) < 0){
 			SDL_Log("ServerReceive: mutex unlock: %s", SDL_GetError());
@@ -614,8 +625,10 @@ void ServerReceive(UserServer* userServerUnsafe){
 		userServer->name[15] = '\0'; //in best case it's already padded
 	}
 
+	//keyS's length validation
+	//-
+
 	//keyS copy
-	//[R] userServerUnsafe->keyS may not be KeyLength long
 	for(int i=0; i<KeyLength; i++){
 		character->keyS[i] = userServerUnsafe->keyS[i];
 	}
@@ -625,6 +638,8 @@ void ServerReceive(UserServer* userServerUnsafe){
 		exit(1);
 	}
 }
+
+static bool stopped = true;
 
 //ServerStop clears server module
 void ServerStop(void){
@@ -639,7 +654,11 @@ void ServerStop(void){
 		exit(1);
 	}
 
-	networkServerStop(); //[R] should be a mutex in network otherwise a lock can be stuck if real network is used
+	//need to be called before networkServerStop as incoming message may already be coming which
+	//could get stuck if SDL_DestroyMutex happens before SDL_LockMutex
+	stopped = true;
+
+	networkServerStop();
 
 	//free worldServer
 	WorldServerDelete(worldServer);

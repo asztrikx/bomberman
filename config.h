@@ -8,6 +8,8 @@ extern int velocity;
 extern int velocityEnemy;
 extern int windowHeight;
 extern int windowWidth;
+extern int worldHeight;
+extern int worldWidth;
 extern double boxRatio;
 extern double enemyRatio;
 extern double enemyKeyChangePossibility;

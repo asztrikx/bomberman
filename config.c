@@ -3,10 +3,12 @@
 #include "type/geometry.h"
 
 int squaresize = 50;
-int velocity = 8;
+int velocity = 6;
 int velocityEnemy = 3;
 int windowHeight = 480;
 int windowWidth = 640;
+int worldHeight = 17;
+int worldWidth = 57;
 double boxRatio = 0.4;
 double enemyRatio = 0.05;
 double enemyKeyChangePossibility = 0.02;
