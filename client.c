@@ -98,38 +98,58 @@ Character* clientDrawCharacterFind(WorldClient* worldClient){
 		}
 	}
 
-	//died
-	if(characterMe == NULL){
-		if(SDL_SetRenderDrawColor(SDLRenderer, 255, 0, 0, 0) < 0){
-			SDL_Log("ClientDraw: SDL_SetRenderDrawColor: %s", SDL_GetError());
-			exit(1);
-		}
-		if(SDL_RenderClear(SDLRenderer) < 0){
-			SDL_Log("ClientDraw: SDL_RenderClear: %s", SDL_GetError());
-			exit(1);
-		}
+	return characterMe;
+}
 
-		//render
-		SDL_RenderPresent(SDLRenderer);
+void clientDrawGameend(WorldClient* worldClient){
+	int r,g,b;
+	switch (worldClient->gamestate){
+		case GamestateDead:
+			r = 255;
+			g = 0;
+			b = 0;
+			break;
+		case GamestateWon:
+			r = 255;
+			g = 255;
+			b = 0;
+			break;
+		default:
+			SDL_Log("clientDrawGameend: Unknown gamestate");
+			exit(1);
+			break;
 	}
 
-	return characterMe;
+	if(SDL_SetRenderDrawColor(SDLRenderer, r, g, b, 255) < 0){
+		SDL_Log("clientDrawGameend: SDL_SetRenderDrawColor: %s", SDL_GetError());
+		exit(1);
+	}
+	if(SDL_RenderClear(SDLRenderer) < 0){
+		SDL_Log("clientDrawGameend: SDL_RenderClear: %s", SDL_GetError());
+		exit(1);
+	}
+
+	//render
+	SDL_RenderPresent(SDLRenderer);
 }
 
 void clientDrawExit(WorldClient* worldClient, Position offset){
 	if(worldClient->exit != NULL){
-		if (SDL_SetRenderDrawColor(SDLRenderer, 255, 255, 0, 255) < 0) {
-			SDL_Log("ClientDraw: SDL_SetRenderDrawColor: %s", SDL_GetError());
+		Array* array = TextureSSObject[ObjectTypeExit];
+
+		if(worldClient->exit->animation.state > array->length){
+			SDL_Log("clientDrawExit: overindex");
 			exit(1);
 		}
+		SDL_Texture* texture = array->data[worldClient->exit->animation.state];
 
-		if(SDL_RenderFillRect(SDLRenderer, &(SDL_Rect){
-			.y = worldClient->exit->y + offset.y,
-			.x = worldClient->exit->x + offset.x,
+		if(SDL_RenderCopy(SDLRenderer, texture, NULL, &(SDL_Rect){
+			.y = worldClient->exit->position.y + offset.y,
+			.x = worldClient->exit->position.x + offset.x,
 			.w = squaresize,
 			.h = squaresize,
 		}) < 0){
-			SDL_Log("ClientDraw: SDL_RenderFillRect: %s", SDL_GetError());
+			SDL_Log("clientDrawObject: SDL_RenderCopy: %s", SDL_GetError());
 			exit(1);
 		}
 	}
@@ -220,10 +240,16 @@ void clientDrawCharacterName(WorldClient* worldClient, Position offset){
 }
 
 void ClientDraw(WorldClient* worldClient){
-	//dead
+	//dead or won
+	if(worldClient->gamestate != GamestateRunning){
+		clientDrawGameend(worldClient);
+		return;
+	}
+
 	Character* characterMe = clientDrawCharacterFind(worldClient);
 	if(characterMe == NULL){
-		return;
+		SDL_Log("ClientDraw: Did not receive character from server");
+		exit(1);
 	}
 
 	//offset
