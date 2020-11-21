@@ -81,7 +81,6 @@ void worldGenerate(int height, int width){
 	//enemy generate randomly
 	for(int i=0; i < (int)(enemyRatio * collisionFreeCountObject); i++){
 		Character* character = CharacterNew();
-		character->bombCount = 0;
 		character->position = SpawnGet(worldServer, 1);
 		character->type = CharacterTypeEnemy;
 		character->velocity = velocityEnemy;
@@ -230,7 +229,7 @@ void keyBomb(Character* character){
 	object->destroy = tickCount + 2 * tickSecond;
 	object->position = positionNew;
 	object->type = ObjectTypeBomb;
-	object->velocity = (Position){0, 0};
+	object->velocity = 0;
 	object->bombOut = false;
 	object->owner = character;
 	ListInsert(&(worldServer->objectList), object);
@@ -296,10 +295,7 @@ void bombExplode(Object* object){
 				.x = object->position.x + i * directionX[j] * squaresize,
 			};
 			objectFire->type = ObjectTypeBombFire;
-			objectFire->velocity = (Position) {
-				.y = 0,
-				.x = 0,
-			};
+			objectFire->velocity = 0;
 			ListInsert(&(worldServer->objectList), objectFire);
 
 			//otherwise there would be 4 fire in the same spot
