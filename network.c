@@ -57,7 +57,7 @@ void NetworkSendClient(WorldServer* worldServer, UserServer* userServer){
 			continue;
 		}
 
-		worldClient->objectS[index] = *((Object*)item->data);
+		worldClient->objectS[index] = *(Object*)item->data;
 	}
 
 	//characterS

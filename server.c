@@ -187,7 +187,7 @@ static void TickCalculateDestroyBomb(Object* object){
 //TickCalculateFireDestroy makes fires destroys all ObjectTypeBox and all Character in collision
 static void TickCalculateFireDestroy(){
 	for(ListItem* item = worldServer->objectList->head; item != NULL; item = item->next){
-		Object* object = (Object*)item->data;
+		Object* object = item->data;
 		if(object->type != ObjectTypeBombFire){
 			continue;
 		}
@@ -233,7 +233,7 @@ static bool TickCalculateEnemyKillCollisionDetect(void* this, Character* that){
 static void TickCalculateWin(){
 	List* collisionCharacterS = CollisionPointAllCharacterGet(worldServer->characterList, worldServer->exit->position, NULL, NULL);
 	for(ListItem* item = collisionCharacterS->head; item != NULL; item = item->next){
-		Character* character = (Character*)item->data;
+		Character* character = item->data;
 		if(
 			character->type == CharacterTypeUser &&
 			worldServer->characterList->length == 1
@@ -253,7 +253,7 @@ static void TickCalculateWin(){
 static void TickCalculateEnemyKill(){
 	List* deathS = ListNew();
 	for(ListItem* item = worldServer->characterList->head; item != NULL; item = item->next){
-		Character* character = (Character*)item->data;
+		Character* character = item->data;
 		if(character->type != CharacterTypeUser){
 			continue;
 		}
@@ -282,7 +282,7 @@ static void TickCalculateEnemyKill(){
 //TickCalculateEnemyMovement randomly creates a new random direction for CharacterTypeEnemys
 static void TickCalculateEnemyMovement(){
 	for(ListItem* item = worldServer->characterList->head; item != NULL; item = item->next){
-		Character* character = (Character*)item->data;
+		Character* character = item->data;
 		if(character->type != CharacterTypeEnemy){
 			continue;
 		}
@@ -319,7 +319,7 @@ static void TickCalculateDestroy(){
 static void TickCalculateAnimate(){
 	//animate
 	for (ListItem* item = worldServer->objectList->head; item != NULL; item = item->next){
-		Object* object = (Object*)item->data;
+		Object* object = item->data;
 
 		//delay
 		object->animation.stateDelayTick++;
@@ -333,7 +333,7 @@ static void TickCalculateAnimate(){
 		object->animation.state %= TextureSSObject[object->type]->length;
 	}
 	for (ListItem* item = worldServer->characterList->head; item != NULL; item = item->next){
-		Character* character = (Character*)item->data;
+		Character* character = item->data;
 
 		//delay
 		character->animation.stateDelayTick++;

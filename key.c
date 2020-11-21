@@ -71,7 +71,7 @@ void KeyMovement(Character* character, WorldServer* worldServer){
 	//moved out from a bomb with !bombOut
 	//in one move it is not possible that it moved out from bomb then moved back again
 	for(ListItem* item = worldServer->objectList->head; item != NULL; item = item->next){
-		Object* object = (Object*)item->data;
+		Object* object = item->data;
 		if(
 			object->type == ObjectTypeBomb &&
 			object->owner == character &&
