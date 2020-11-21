@@ -277,10 +277,6 @@ char* ServerAuthCreate(){
 //bombExplode removes bomb and creates fire in its place
 //if object->type != ObjectTypeBomb then nothing happens
 void bombExplode(Object* object){
-	if(object->type != ObjectTypeBomb){
-		return;
-	}
-
 	//fire add
 	int radius = 1;
 
@@ -319,35 +315,42 @@ void bombExplode(Object* object){
 	}
 }
 
-//clientDrawCharacterFind destroys all ObjectTypeBox and ObjectTypeCharacter if object is ObjectTypeBombFire
-void fireDestroy(Object* object){
-	//object collision
-	List* collisionObjectS = CollisionPointAllObjectGet(worldServer->objectList, object->position, NULL, NULL);
-	for(ListItem* item = collisionObjectS->head; item != NULL; item = item->next){
-		if(((Object*)item->data)->type == ObjectTypeBox){
-			ListItem* listItem = ListFindItemByPointer(worldServer->objectList, item->data);
-			ListRemoveItem(&(worldServer->objectList), listItem, ObjectDelete);
-		} else if(((Object*)item->data)->type == ObjectTypeBomb){
-			//bombExplode(objectItemCurrent->object); [R]
+//serverTickCalculateFireDestroy makes fires destroys all ObjectTypeBox and all Character in collision
+void serverTickCalculateFireDestroy(){
+	for(ListItem* item = worldServer->objectList->head; item != NULL; item = item->next){
+		Object* object = (Object*)item->data;
+		if(object->type != ObjectTypeBombFire){
+			continue;
 		}
-	}
-	ListDelete(collisionObjectS, NULL);
-
-	//character collision
-	List* collisionCharacterS = CollisionPointAllCharacterGet(worldServer->characterList, object->position, NULL, NULL);
-	for(ListItem* item = collisionCharacterS->head; item != NULL; item = item->next){
-		//get
-		ListItem* listItem = ListFindItemByPointer(worldServer->characterList, item->data);
-
-		//UserServer update
-		if(((Character*)listItem->data)->owner != NULL){
-			((Character*)listItem->data)->owner->gamestate = GamestateDead;
+		
+		//object collision
+		List* collisionObjectS = CollisionPointAllObjectGet(worldServer->objectList, object->position, NULL, NULL);
+		for(ListItem* item = collisionObjectS->head; item != NULL; item = item->next){
+			if(((Object*)item->data)->type == ObjectTypeBox){
+				ListItem* listItem = ListFindItemByPointer(worldServer->objectList, item->data);
+				ListRemoveItem(&(worldServer->objectList), listItem, ObjectDelete);
+			} else if(((Object*)item->data)->type == ObjectTypeBomb){
+				//bombExplode(objectItemCurrent->object); [R]
+			}
 		}
+		ListDelete(collisionObjectS, NULL);
 
-		//remove
-		ListRemoveItem(&(worldServer->characterList), listItem, CharacterDelete);
+		//character collision
+		List* collisionCharacterS = CollisionPointAllCharacterGet(worldServer->characterList, object->position, NULL, NULL);
+		for(ListItem* item = collisionCharacterS->head; item != NULL; item = item->next){
+			//get
+			ListItem* listItem = ListFindItemByPointer(worldServer->characterList, item->data);
+
+			//UserServer update
+			if(((Character*)listItem->data)->owner != NULL){
+				((Character*)listItem->data)->owner->gamestate = GamestateDead;
+			}
+
+			//remove
+			ListRemoveItem(&(worldServer->characterList), listItem, CharacterDelete);
+		}
+		ListDelete(collisionCharacterS, NULL);
 	}
-	ListDelete(collisionCharacterS, NULL);
 }
 
 bool enemyKillCollisionDetect(void* this, Character* that){
@@ -402,26 +405,7 @@ void serverTickCalculateEnemyKill(){
 	ListDelete(deathS, NULL);
 }
 
-//serverTickCalculate calculates new world state from current
-void serverTickCalculate(){
-	//destroy by server
-	//this should be calculated first as these objects should not exists in this tick
-	ListItem* listItemCurrent = worldServer->objectList->head;
-	while(listItemCurrent != NULL){
-		if(tickCount != ((Object*)listItemCurrent->data)->destroy){
-			listItemCurrent = listItemCurrent->next;
-			continue;
-		}
-
-		bombExplode(listItemCurrent->data);
-
-		listItemCurrent = listItemCurrent->next;
-
-		ListRemoveItem(&(worldServer->objectList), listItemCurrent->prev, ObjectDelete);
-	}
-
-	//enemy random movement
-	//must be before character movement as that fixes bumping into wall
+void serverTickCalculateEnemyMovement(){
 	for(ListItem* item = worldServer->characterList->head; item != NULL; item = item->next){
 		Character* character = (Character*)item->data;
 		if(character->type != CharacterTypeEnemy){
@@ -439,6 +423,33 @@ void serverTickCalculate(){
 		}
 		character->keyS[rand() % KeyLength] = true;
 	}
+}
+
+void serverTickCalculateDestroy(){
+	ListItem* listItemCurrent = worldServer->objectList->head;
+	while(listItemCurrent != NULL){
+		if(tickCount != ((Object*)listItemCurrent->data)->destroy){
+			listItemCurrent = listItemCurrent->next;
+			continue;
+		}
+
+		if(((Object*)listItemCurrent->data)->type == ObjectTypeBomb){
+			bombExplode(listItemCurrent->data);
+		}
+
+		listItemCurrent = listItemCurrent->next;
+
+		ListRemoveItem(&(worldServer->objectList), listItemCurrent->prev, ObjectDelete);
+	}
+}
+
+//serverTickCalculate calculates new world state from current
+void serverTickCalculate(){
+	//this should be calculated first as these objects should not exists in this tick
+	serverTickCalculateDestroy();
+
+	//must be before character movement as that fixes bumping into wall
+	serverTickCalculateEnemyMovement();
 	
 	//character movement
 	//this should be calculated before fireDestroy() otherwise player would be in fire for 1 tick
@@ -448,20 +459,15 @@ void serverTickCalculate(){
 		keyMovement(item->data);
 	}
 
-	//win
 	//should be before any destroy
 	serverTickCalculateWin();
 
-	//destroy by user
-	for(ListItem* item = worldServer->objectList->head; item != NULL; item = item->next){
-		if(((Object*)item->data)->type == ObjectTypeBombFire){
-			fireDestroy(item->data);
-		}
-	}
+	serverTickCalculateFireDestroy();
 
-	//destroy by enemy
 	serverTickCalculateEnemyKill();
+}
 
+void serverTickAnimate(){
 	//animate
 	for (ListItem* item = worldServer->objectList->head; item != NULL; item = item->next){
 		Object* object = (Object*)item->data;
@@ -532,6 +538,8 @@ Uint32 serverTick(Uint32 interval, void *param){
 	}
 	
 	serverTickCalculate();
+
+	serverTickAnimate();
 
 	serverTickSend();
 
