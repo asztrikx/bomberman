@@ -23,7 +23,6 @@ static int tickId;
 static bool stopped = true;
 
 //WorldGenerate generates default map
-//free should be called
 static void WorldGenerate(int height, int width){
 	if(
 		height % 2 != 1 ||
@@ -427,8 +426,13 @@ Uint32 Tick(Uint32 interval, void *param){
 	return interval;
 }
 
+//Save saves worldServer and tickCount into world.save
 void Save(){
 	FILE* file = fopen("world.save", "wt");
+	if(file == NULL){
+		SDL_Log("Save: (Over)Write file");
+		exit(1);
+	}
 
 	//height
 	fprintf(file, "%d\n", worldServer->height);
@@ -489,6 +493,7 @@ void Save(){
 	fclose(file);
 }
 
+//Load loads world.save into worldServer
 void Load(){
 	if(worldServer != NULL){
 		WorldServerDelete(worldServer);
@@ -496,6 +501,10 @@ void Load(){
 	worldServer = WorldServerNew();
 
 	FILE* file = fopen("world.save", "rt");
+	if(file == NULL){
+		SDL_Log("Load: Open file");
+		exit(1);
+	}
 
 	//height
 	fscanf(file, "%d\n", &worldServer->height);
