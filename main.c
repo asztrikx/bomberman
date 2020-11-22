@@ -36,6 +36,5 @@ int main(int argc, char *argv[]) {
 	
 	SDLDestroy();
 
-
 	return 0;
 }
