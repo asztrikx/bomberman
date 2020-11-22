@@ -23,7 +23,7 @@ typedef struct{
 	bool keyS[KeyLength];
 } Character; //seeable by others
 
-Character* CharacterNew();
+Character* CharacterNew(void);
 void CharacterDelete(Character* character);
 
 #endif

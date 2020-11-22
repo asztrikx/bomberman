@@ -17,7 +17,7 @@ void ListInsertItem(List** list, ListItem* listItem);
 void ListRemoveItem(List** list, ListItem* listItem, void (*dataFree)());
 ListItem* ListFindItemByFunction(List* list, bool (*func)(void*));
 ListItem* ListFindItemByPointer(List* list, void* data);
-List* ListNew();
+List* ListNew(void);
 void ListDelete(List* list, void (*dataFree)());
 
 #endif

@@ -79,7 +79,7 @@ ListItem* ListFindItemByPointer(List* list, void* data){
 }
 
 //ListNew creates a new List
-List* ListNew(){
+List* ListNew(void){
 	List* list = (List*) malloc(sizeof(List));
 	list->head = NULL;
 	list->length = 0;

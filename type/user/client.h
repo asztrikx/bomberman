@@ -11,7 +11,7 @@ typedef struct{
 	char* auth;
 } UserClient;
 
-UserClient* UserClientNew();
+UserClient* UserClientNew(void);
 void UserClientDelete(UserClient* userClient);
 
 #endif

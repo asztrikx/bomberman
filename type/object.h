@@ -24,7 +24,7 @@ typedef struct{
 	Animation animation;
 } Object;
 
-Object* ObjectNew();
+Object* ObjectNew(void);
 void ObjectDelete(Object* object);
 
 #endif

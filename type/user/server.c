@@ -4,7 +4,7 @@
 #include <stdbool.h>
 
 //UserServerNew creates a new UserServer
-UserServer* UserServerNew(){
+UserServer* UserServerNew(void){
 	UserServer* userServer = (UserServer*) malloc(sizeof(UserServer));
 	userServer->auth = (char*) malloc((26 + 1) * sizeof(char));
 	for(int i=0; i < KeyLength; i++){

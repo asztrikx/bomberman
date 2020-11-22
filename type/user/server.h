@@ -13,7 +13,7 @@ typedef struct{
 	Gamestate gamestate;
 } UserServer;
 
-UserServer* UserServerNew();
+UserServer* UserServerNew(void);
 void UserServerDelete(UserServer* userServer);
 
 #endif

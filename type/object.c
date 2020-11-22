@@ -4,7 +4,7 @@
 #include <stdlib.h>
 
 //ObjectNew creates a new Object
-Object* ObjectNew(){
+Object* ObjectNew(void){
 	Object* object = (Object*) malloc(sizeof(Object));
 	object->created = -1;
 	object->destroy = -1;

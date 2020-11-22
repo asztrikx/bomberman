@@ -4,7 +4,7 @@
 #include "key.h"
 
 //CharacterNew creates a new Character
-Character* CharacterNew(){
+Character* CharacterNew(void){
 	Character* character = (Character*) malloc(sizeof(Character));
 	character->animation = (Animation){
 		.state = 0,

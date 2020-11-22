@@ -4,7 +4,7 @@
 #include <stdbool.h>
 
 //UserClientNew creates a new UserClient
-UserClient* UserClientNew(){
+UserClient* UserClientNew(void){
 	UserClient* userClient = (UserClient*) malloc(sizeof(UserClient));
 	userClient->auth = (char*) malloc((26 + 1) * sizeof(char));
 	for(int i=0; i < KeyLength; i++){

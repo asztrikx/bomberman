@@ -6,7 +6,7 @@
 #include "../geometry.h"
 
 //WorldClientNew creates a new WorldClient
-WorldClient* WorldClientNew(){
+WorldClient* WorldClientNew(void){
 	WorldClient* worldClient = (WorldClient*) malloc(sizeof(WorldClient));
 	worldClient->characterS = NULL;
 	worldClient->characterSLength = 0;

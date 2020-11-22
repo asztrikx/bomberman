@@ -15,7 +15,7 @@ typedef struct{
 	Gamestate gamestate;
 } WorldClient;
 
-WorldClient* WorldClientNew();
+WorldClient* WorldClientNew(void);
 void WorldClientDelete(WorldClient* worldClient);
 
 #endif

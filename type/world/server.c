@@ -5,7 +5,7 @@
 #include "../object.h"
 
 //WorldServerNew creates a new WorldServer
-WorldServer* WorldServerNew(){
+WorldServer* WorldServerNew(void){
 	WorldServer* worldServer = (WorldServer*) malloc(sizeof(WorldServer));
 	worldServer->characterList = ListNew();
 	worldServer->exit = NULL;

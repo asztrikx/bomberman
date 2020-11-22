@@ -129,7 +129,7 @@ static UserServer* AuthFind(char* auth){
 }
 
 //AuthCreate creates a 26 character long auth key
-static char* AuthCreate(){
+static char* AuthCreate(void){
 	char* auth = (char*) malloc((26 + 1) * sizeof(char));
 	for(int i=0; i<26; i++){
 		auth[i] = rand() % ('Z' - 'A' + 1) + 'A';
@@ -184,7 +184,7 @@ static void TickCalculateDestroyBomb(Object* object){
 }
 
 //TickCalculateFireDestroy makes fires destroys all ObjectTypeBox and all Character in collision
-static void TickCalculateFireDestroy(){
+static void TickCalculateFireDestroy(void){
 	for(ListItem* item = worldServer->objectList->head; item != NULL; item = item->next){
 		Object* object = item->data;
 		if(object->type != ObjectTypeBombFire){
@@ -229,7 +229,7 @@ static bool TickCalculateEnemyKillCollisionDetect(void* this, Character* that){
 }
 
 //TickCalculateWin checks if any CharacterTypeUser if in a winning state and removes them if so
-static void TickCalculateWin(){
+static void TickCalculateWin(void){
 	List* collisionCharacterS = CollisionCharacterSGet(worldServer->characterList, worldServer->exit->position, NULL, NULL);
 	for(ListItem* item = collisionCharacterS->head; item != NULL; item = item->next){
 		Character* character = item->data;
@@ -249,7 +249,7 @@ static void TickCalculateWin(){
 }
 
 //TickCalculateEnemyKill checks if any CharacterTypeUser is colliding with CharacterTypeEnemy and kills them if so
-static void TickCalculateEnemyKill(){
+static void TickCalculateEnemyKill(void){
 	List* deathS = ListNew();
 	for(ListItem* item = worldServer->characterList->head; item != NULL; item = item->next){
 		Character* character = item->data;
@@ -279,7 +279,7 @@ static void TickCalculateEnemyKill(){
 }
 
 //TickCalculateEnemyMovement randomly creates a new random direction for CharacterTypeEnemys
-static void TickCalculateEnemyMovement(){
+static void TickCalculateEnemyMovement(void){
 	for(ListItem* item = worldServer->characterList->head; item != NULL; item = item->next){
 		Character* character = item->data;
 		if(character->type != CharacterTypeEnemy){
@@ -296,7 +296,7 @@ static void TickCalculateEnemyMovement(){
 
 //TickCalculateDestroy removes items where .destroy == tickCount
 //destroy hooks also added here
-static void TickCalculateDestroy(){
+static void TickCalculateDestroy(void){
 	ListItem* listItemCurrent = worldServer->objectList->head;
 	while(listItemCurrent != NULL){
 		if(tickCount != ((Object*)listItemCurrent->data)->destroy){
@@ -315,7 +315,7 @@ static void TickCalculateDestroy(){
 }
 
 //TickCalculateAnimate calculates next texture state from current
-static void TickCalculateAnimate(){
+static void TickCalculateAnimate(void){
 	//animate
 	for (ListItem* item = worldServer->objectList->head; item != NULL; item = item->next){
 		Object* object = item->data;
@@ -348,7 +348,7 @@ static void TickCalculateAnimate(){
 }
 
 //TickCalculate calculates next state from current
-static void TickCalculate(){
+static void TickCalculate(void){
 	//this should be calculated first as these objects should not exists in this tick
 	TickCalculateDestroy();
 
@@ -376,7 +376,7 @@ static void TickCalculate(){
 }
 
 //TickSend sends new world to connected clients
-static void TickSend(){
+static void TickSend(void){
 	for(ListItem* item = userServerList->head; item != NULL; item = item->next){
 		//remove exit if not seeable
 		List* collisionObjectS = CollisionObjectSGet(worldServer->objectList, worldServer->exit->position, worldServer->exit, NULL);
@@ -427,7 +427,7 @@ Uint32 Tick(Uint32 interval, void *param){
 }
 
 //Save saves worldServer and tickCount into world.save
-void Save(){
+void Save(void){
 	FILE* file = fopen("world.save", "wt");
 	if(file == NULL){
 		SDL_Log("Save: (Over)Write file");
@@ -494,7 +494,7 @@ void Save(){
 }
 
 //Load loads world.save into worldServer
-void Load(){
+void Load(void){
 	if(worldServer != NULL){
 		WorldServerDelete(worldServer);
 	}

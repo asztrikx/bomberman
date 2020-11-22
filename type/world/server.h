@@ -12,7 +12,7 @@ typedef struct{
 	int height, width;
 } WorldServer;
 
-WorldServer* WorldServerNew();
+WorldServer* WorldServerNew(void);
 void WorldServerDelete(WorldServer* worldServer);
 
 #endif
