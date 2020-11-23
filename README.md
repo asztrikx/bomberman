@@ -360,4 +360,4 @@ A játékot parancssorból lehet elindítani, onnatól a játékmenet lényegi r
 - [Enemy](https://opengameart.org/content/enemy-slave)
 - [Bomb](https://opengameart.org/content/16-bit-animated-bomb)
 - [BombFire](https://opengameart.org/content/fireflame)
-- [Exit](http://pancakebobapps.wix.com/apps)
+- [Exit](https://opengameart.org/users/rrcaseyr)
