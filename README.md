@@ -284,6 +284,8 @@ A játékot parancssorból lehet elindítani, onnatól a játékmenet lényegi r
 	//CollisionLinePositionGet calculates position taking collision into account in discrete line (from, to)
 	//from must not be equal to to
 	//we can be NULL
+	//if collisionDecideObjectFunction is NULL then it's treated as always true
+	//if collisionDecideCharacterFunction is NULL then it's treated as always true
 	Position CollisionLinePositionGet(
 	WorldServer* worldServer,
 		Position from,
@@ -294,7 +296,7 @@ A játékot parancssorból lehet elindítani, onnatól a játékmenet lényegi r
 	)
 
 	//CollisionFreeCountObjectGetRecursion is a helper function of CollisionFreeCountObjectGet
-	int CollisionFreeCountObjectGetRecursion(WorldServer* worldServer, Position positionCompress)
+	static int CollisionFreeCountObjectGetRecursion(WorldServer* worldServer, Position positionCompress)
 
 	//CollisionFreeCountObjectGet returns how many square sized object-free area is reachable from (position - position % squaresize)
 	int CollisionFreeCountObjectGet(WorldServer* worldServer, Position position)

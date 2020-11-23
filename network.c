@@ -4,8 +4,8 @@
 #include "server.h"
 #include "client.h"
 
-bool serverStop = true;
-bool clientStop = true;
+static bool serverStop = true;
+static bool clientStop = true;
 
 //NetworkServerStop disables incoming requests
 void NetworkServerStop(void){

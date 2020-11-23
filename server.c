@@ -91,7 +91,7 @@ static void WorldGenerate(int height, int width){
 	}
 }
 
-UserServer* characterFindVariable;
+static UserServer* characterFindVariable;
 
 //CharacterFindFunction is a helper function of CharacterFind
 static bool CharacterFindFunction(void* data){

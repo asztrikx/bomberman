@@ -83,6 +83,8 @@ List* CollisionCharacterSGet(List* characterS, Position position, void* this, Co
 //CollisionLinePositionGet calculates position taking collision into account in discrete line (from, to)
 //from must not be equal to to
 //we can be NULL
+//if collisionDecideObjectFunction is NULL then it's treated as always true
+//if collisionDecideCharacterFunction is NULL then it's treated as always true
 Position CollisionLinePositionGet(
 	WorldServer* worldServer,
 	Position from,
@@ -121,38 +123,38 @@ Position CollisionLinePositionGet(
 		//step y
 		current.y += unit.y;
 
-		List* collisionPointAllObject = CollisionObjectSGet(worldServer->objectList, current, we, collisionDecideObjectFunction);
-		List* collisionPointAllCharacter = CollisionCharacterSGet(worldServer->characterList, current, we, collisionDecideCharacterFunction);
+		List* collisionObjectS = CollisionObjectSGet(worldServer->objectList, current, we, collisionDecideObjectFunction);
+		List* collisionCharacterS = CollisionCharacterSGet(worldServer->characterList, current, we, collisionDecideCharacterFunction);
 		if(
-			collisionPointAllObject->length != 0 ||
-			collisionPointAllCharacter->length != 0
+			collisionObjectS->length != 0 ||
+			collisionCharacterS->length != 0
 		){
 			current.y -= unit.y;
 		}
-		ListDelete(collisionPointAllObject, NULL);
-		ListDelete(collisionPointAllCharacter, NULL);
+		ListDelete(collisionObjectS, NULL);
+		ListDelete(collisionCharacterS, NULL);
 
 		//step x
 		current.x += unit.x;
 
-		collisionPointAllObject = CollisionObjectSGet(worldServer->objectList, current, we, collisionDecideObjectFunction);
-		collisionPointAllCharacter = CollisionCharacterSGet(worldServer->characterList, current, we, collisionDecideCharacterFunction);
+		collisionObjectS = CollisionObjectSGet(worldServer->objectList, current, we, collisionDecideObjectFunction);
+		collisionCharacterS = CollisionCharacterSGet(worldServer->characterList, current, we, collisionDecideCharacterFunction);
 		if(
-			collisionPointAllObject->length != 0 ||
-			collisionPointAllCharacter->length != 0
+			collisionObjectS->length != 0 ||
+			collisionCharacterS->length != 0
 		){
 			current.x -= unit.x;
 		}
-		ListDelete(collisionPointAllObject, NULL);
-		ListDelete(collisionPointAllCharacter, NULL);
+		ListDelete(collisionObjectS, NULL);
+		ListDelete(collisionCharacterS, NULL);
 	}
 
 	return current;
 }
 
-bool** collisionFreeCountObjectGetMemory;
+static bool** collisionFreeCountObjectGetMemory;
 //CollisionFreeCountObjectGetRecursion is a helper function of CollisionFreeCountObjectGet
-int CollisionFreeCountObjectGetRecursion(WorldServer* worldServer, Position positionCompress){
+static int CollisionFreeCountObjectGetRecursion(WorldServer* worldServer, Position positionCompress){
 	Position position;
 	position.y = positionCompress.y * squaresize;
 	position.x = positionCompress.x * squaresize;
@@ -167,9 +169,9 @@ int CollisionFreeCountObjectGetRecursion(WorldServer* worldServer, Position posi
 	collisionFreeCountObjectGetMemory[positionCompress.y][positionCompress.x] = true;
 
 	//position is valid
-	List* collisionListObject = CollisionObjectSGet(worldServer->objectList, position, NULL, NULL);
-	int collisionCount = collisionListObject->length;
-	ListDelete(collisionListObject, NULL);
+	List* collisionObjectS = CollisionObjectSGet(worldServer->objectList, position, NULL, NULL);
+	int collisionCount = collisionObjectS->length;
+	ListDelete(collisionObjectS, NULL);
 
 	if(collisionCount != 0){
 		return 0;
@@ -241,9 +243,9 @@ Position SpawnGet(WorldServer* worldServer, int collisionFreeCountObjectMin){
 		position.x = positionCompressed.x * squaresize;
 
 		//collision check
-		List* collisionListCharacter = CollisionCharacterSGet(worldServer->characterList, position, NULL, NULL);
-		collisionCountCharacter = collisionListCharacter->length;
-		ListDelete(collisionListCharacter, NULL);
+		List* collisionCharacterS = CollisionCharacterSGet(worldServer->characterList, position, NULL, NULL);
+		collisionCountCharacter = collisionCharacterS->length;
+		ListDelete(collisionCharacterS, NULL);
 
 		//position valid
 		collisionFreeCountObject = CollisionFreeCountObjectGet(worldServer, position);
