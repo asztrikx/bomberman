@@ -37,6 +37,12 @@ static Uint32 Tick(Uint32 interval, void *param){
 
 //EventKey handles movement key events
 static int EventKey(void* data, SDL_Event* sdl_event){
+	if(sdl_event->type == SDL_MOUSEBUTTONDOWN){
+		SDL_Event sdl_Event;
+		sdl_Event.type = SDL_QUIT;
+		SDL_PushEvent(&sdl_Event);
+		return 0;
+	}
 	if(
 		sdl_event->type != SDL_KEYDOWN &&
 		sdl_event->type != SDL_KEYUP
@@ -231,7 +237,7 @@ static void Draw(WorldClient* worldClient){
 	};
 
 	//clear & background
-	if(SDL_SetRenderDrawColor(SDLRenderer, 0, 255, 0, 255) < 0){
+	if(SDL_SetRenderDrawColor(SDLRenderer, 30, 30, 30, 255) < 0){
 		SDL_Log("Draw: SDL_SetRenderDrawColor: %s", SDL_GetError());
 		exit(1);
 	}
