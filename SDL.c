@@ -61,6 +61,10 @@ static void SDLResourceListLoadObject(void){
 			//texture save
 			SDL_Texture* texture = IMG_LoadTexture(SDLRenderer, path);
 			if(texture == NULL){
+				if(index == 0){
+					SDL_Log("SDLResourceListLoadObject: missing resource: %s", path);
+					exit(1);
+				}
 				break;
 			}
 
@@ -105,6 +109,10 @@ static void SDLResourceListLoadCharacter(void){
 			//texture save
 			SDL_Texture* texture = IMG_LoadTexture(SDLRenderer, path);
 			if(texture == NULL){
+				if(index == 0){
+					SDL_Log("SDLResourceListLoadObject: missing resource: %s", path);
+					exit(1);
+				}
 				break;
 			}
 
@@ -118,21 +126,29 @@ static void SDLResourceListLoadCharacter(void){
 void SDLInit(void){
 	//init
 	if (SDL_Init(SDL_INIT_EVERYTHING) < 0) {
-		SDL_Log("sdl init: %s", SDL_GetError());
+		SDL_Log("SDLInit: SDL_Init: %s", SDL_GetError());
 		exit(1);
 	}
 
 	//window
 	SDLWindow = SDL_CreateWindow("Bomberman", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, windowWidth, windowHeight, 0);
 	if (SDLWindow == NULL) {
-		SDL_Log("sdl window: %s", SDL_GetError());
+		SDL_Log("SDLInit: SDL_CreateWindow: %s", SDL_GetError());
 		exit(1);
 	}
+	if (SDL_SetWindowFullscreen(SDLWindow, SDL_WINDOW_FULLSCREEN_DESKTOP) < 0) {
+		SDL_Log("SDLInit: SDL_SetWindowFullscreen: %s", SDL_GetError());
+		exit(1);
+	}
+	SDL_DisplayMode DM;
+	SDL_GetCurrentDisplayMode(0, &DM);
+	windowHeight = DM.h;
+	windowWidth = DM.w;
 
 	//render
 	SDLRenderer = SDL_CreateRenderer(SDLWindow, -1, SDL_RENDERER_SOFTWARE);
 	if (SDLRenderer == NULL) {
-		SDL_Log("sdl render: %s", SDL_GetError());
+		SDL_Log("SDLInit: SDL_CreateRenderer: %s", SDL_GetError());
 		exit(1);
 	}
 	SDL_RenderClear(SDLRenderer);
