@@ -30,7 +30,7 @@ A játékot parancssorból lehet elindítani, onnatól a játékmenet lényegi r
 - Indítás
 	- Új pálya: `./main`
 	- world.save betöltése: `./main load` (más spawn point)
-- Játék
+- Játék irányítás
 	- Mozgás
 		- `W`/Fel
 		- `A`/Balra
@@ -38,6 +38,18 @@ A játékot parancssorból lehet elindítani, onnatól a játékmenet lényegi r
 		- `D`/Jobbra
 	- Bomba lehelyezés: `Space`
 	- Pálya mentése world.save-be: `Q`
+- Játék
+	- Cél
+		> A pályán találhatóak ellenséges erők, melyekkel az érintkezés halálos. Azonban nem elég kikerülni őket! Meg kell találni az összeset és bomba lehelyezésével meg kell semmisítened mindet. Ezzel párhuzamosan kereshető a kijárat, amely az egyik elpusztítható doboz alá van elrejtve, azonban ezt csak akkor használhatod, ha mindegyik ellenséggel legyőzted.
+	- Szabályok
+		- Bomba nem azonnal robban.
+		- A bomba okozta tűz se azonnal tűnik el.
+		- Egyszerre 1 bombát lehet lehelyezni.
+		- Vannak elpusztíthatatlan blokkok, amely a játék stílus sajátosságát adják.
+	- Tippek
+		- Kezdéskor is szembe találhatod magad ellenséges erőkkel.
+		- Mindenkinek a hitboxa egy négyzet, erre ügyelj!
+		- Vigyázz hogy a bomba okozta tűz nehogy téged is a martalékává tegyen!
 
 # Fordítás
 - SDL2 könyvtárat igényli: [Link](https://infoc.eet.bme.hu/sdl_telepito/)
