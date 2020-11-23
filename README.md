@@ -51,6 +51,7 @@ A játékot parancssorból lehet elindítani, onnatól a játékmenet lényegi r
 		- Kezdéskor is szembe találhatod magad ellenséges erőkkel.
 		- Mindenkinek a hitboxa egy négyzet, erre ügyelj!
 		- Vigyázz hogy a bomba okozta tűz nehogy téged is a martalékává tegyen!
+		- Az irányítás is a játék nehézsége (😉), érdemes két billentyűt egyszerre használni
 
 # Fordítás
 - SDL2 könyvtárat igényli: [Link](https://infoc.eet.bme.hu/sdl_telepito/)
