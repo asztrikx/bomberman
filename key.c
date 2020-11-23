@@ -127,6 +127,7 @@ void KeyBombPlace(Character* character, WorldServer* worldServer, long long tick
 	object->velocity = 0;
 	object->bombOut = false;
 	object->owner = character;
+	object->animation.stateDelayTickEnd = 15;
 	ListInsert(&(worldServer->objectList), object);
 
 	//bomb decrease

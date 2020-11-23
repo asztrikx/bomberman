@@ -38,6 +38,7 @@ A játékot parancssorból lehet elindítani, onnatól a játékmenet lényegi r
 		- `D`/Jobbra
 	- Bomba lehelyezés: `Space`
 	- Pálya mentése world.save-be: `Q`
+	- Kilépés: `Egér kattintás`
 - Játék
 	- Cél
 		> A pályán találhatóak ellenséges erők, melyekkel az érintkezés halálos. Azonban nem elég kikerülni őket! Meg kell találni az összeset és bomba lehelyezésével meg kell semmisítened mindet. Ezzel párhuzamosan kereshető a kijárat, amely az egyik elpusztítható doboz alá van elrejtve, azonban ezt csak akkor használhatod, ha mindegyik ellenséggel legyőzted.
@@ -350,3 +351,12 @@ A játékot parancssorból lehet elindítani, onnatól a játékmenet lényegi r
 	//SDLDestroy unloads SDL modules
 	void SDLDestroy(void)
 	```
+
+# Credit
+- [Character](https://opengameart.org/content/animated-character)
+- [Box](https://opengameart.org/content/2d-wooden-box)
+- [Wall](https://opengameart.org/content/handpainted-stone-floor-texture)
+- [Enemy](https://opengameart.org/content/enemy-slave)
+- [Bomb](https://opengameart.org/content/16-bit-animated-bomb)
+- [BombFire](https://opengameart.org/content/fireflame)
+- [Exit](http://pancakebobapps.wix.com/apps)

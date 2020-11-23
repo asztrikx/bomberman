@@ -9,7 +9,7 @@ Character* CharacterNew(void){
 	character->animation = (Animation){
 		.state = 0,
 		.stateDelayTick = 0,
-		.stateDelayTickEnd = 0,
+		.stateDelayTickEnd = 10,
 	};
 	character->bombCount = 0;
 	for(int i=0; i<KeyLength; i++){

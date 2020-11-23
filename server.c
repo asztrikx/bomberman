@@ -77,6 +77,7 @@ static void WorldGenerate(int height, int width){
 	Object* object = ObjectNew();
 	object->position = ((Object*)worldServer->objectList->head->data)->position;
 	object->type = ObjectTypeExit;
+	object->animation.stateDelayTickEnd = 10;
 	ListInsert(&(worldServer->objectList), object);
 	worldServer->exit = object;
 
@@ -172,6 +173,7 @@ static void TickCalculateDestroyBomb(Object* object){
 		objectFire->owner = object->owner;
 		objectFire->position = position;
 		objectFire->type = ObjectTypeBombFire;
+		objectFire->animation.stateDelayTickEnd = 2;
 		objectFire->velocity = 0;
 
 		ListInsert(&(worldServer->objectList), objectFire);
@@ -333,6 +335,19 @@ static void TickCalculateAnimate(void){
 	}
 	for (ListItem* item = worldServer->characterList->head; item != NULL; item = item->next){
 		Character* character = item->data;
+
+		bool moving = false;
+		for (int i=0; i < KeyLength; i++) {
+			if(character->keyS[i]){
+				moving = true;
+				break;
+			}
+		}
+		if(!moving){
+			character->animation.state = 0;
+			character->animation.stateDelayTick = 0;
+			continue;
+		}
 
 		//delay
 		character->animation.stateDelayTick++;
