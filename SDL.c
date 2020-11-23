@@ -140,10 +140,10 @@ void SDLInit(void){
 		SDL_Log("SDLInit: SDL_SetWindowFullscreen: %s", SDL_GetError());
 		exit(1);
 	}
-	SDL_DisplayMode DM;
-	SDL_GetCurrentDisplayMode(0, &DM);
-	windowHeight = DM.h;
-	windowWidth = DM.w;
+	SDL_DisplayMode sdl_DisplayMode;
+	SDL_GetCurrentDisplayMode(0, &sdl_DisplayMode);
+	windowHeight = sdl_DisplayMode.h;
+	windowWidth = sdl_DisplayMode.w;
 
 	//render
 	SDLRenderer = SDL_CreateRenderer(SDLWindow, -1, SDL_RENDERER_SOFTWARE);
