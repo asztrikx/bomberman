@@ -2,6 +2,8 @@
 #include "geometry.h"
 #include <math.h>
 #include <stdint.h>
+#include <stdbool.h>
+#include <stdlib.h>
 #include "config.h"
 #include "type/geometry.h"
 #include "type/object.h"
@@ -232,6 +234,7 @@ Position SpawnGet(WorldServer* worldServer, int collisionFreeCountObjectMin){
 	Position position;
 	int collisionCountCharacter;
 	int collisionFreeCountObject;
+	bool near = false;
 	do {
 		//random position in world
 		//this could be a bit optimized but it's more error prone
@@ -247,11 +250,25 @@ Position SpawnGet(WorldServer* worldServer, int collisionFreeCountObjectMin){
 		collisionCountCharacter = collisionCharacterS->length;
 		ListDelete(collisionCharacterS, NULL);
 
+		//distance check
+		near = false;
+		for(ListItem* item = worldServer->characterList->head; item != NULL; item = item->next){
+			Character* character = item->data;
+			if(
+				abs(position.y - character->position.y) < 3 * squaresize &&
+				abs(position.x - character->position.x) < 3 * squaresize
+			){
+				near = true;
+				break;
+			}
+		}
+
 		//position valid
 		collisionFreeCountObject = CollisionFreeCountObjectGet(worldServer, position);
 	} while (
 		collisionCountCharacter != 0 ||
-		collisionFreeCountObject < collisionFreeCountObjectMin
+		collisionFreeCountObject < collisionFreeCountObjectMin ||
+		near
 	);
 
 	return position;
