@@ -1,4 +1,13 @@
+# Előnézet
 ![Előkép](preview.png)
+
+Az általam választott feladat a klasszikus Bomberman játék alapkoncepciójának utánzása volt:  
+Egy véletlenszerűen generált pályán ellenségek közepette találod magad. Két eszközöd van: bomba és az ügyesség.  
+Feladatunk, hogy mindegyik ellenséget felrobbantsuk, illetve megtaláljuk a kijáratot, az egyik elpusztítható doboz alatt.  
+De vigyázat! Ha túl közel állsz a bombához, könnyen a martalékává válhatsz!  
+Kis segítség, hogy van quick save opció, azonban újratöltéskor nem születsz ugyanoda!  
+ 
+Jó szórakozást!
 
 # Feladat (Rövid)
 Az eredeti bomberman játék alapkoncepcióját utánzó programról van szó.
