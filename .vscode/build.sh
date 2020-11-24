@@ -1,5 +1,5 @@
 #!/bin/bash
-cd /mnt/hdd/Programming/C/BME/bomberman/
+cd "$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )""/../"
 location=$(pwd)'/'
 regex='s:./:'$location':'
 
