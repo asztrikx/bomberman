@@ -1,3 +1,5 @@
+![Előkép](preview.png)
+
 # Feladat (Rövid)
 Az eredeti bomberman játék alapkoncepcióját utánzó programról van szó.
 A játékos a pályán tud mozogni, robbanó tölteteket lerakni, ellenségek erőket vagy falakat robbantani ezáltal.
