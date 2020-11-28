@@ -131,15 +131,20 @@ void SDLInit(void){
 	}
 
 	//window
-	SDLWindow = SDL_CreateWindow("Bomberman", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, windowWidth, windowHeight, 0);
+	SDLWindow = SDL_CreateWindow(
+		"Bomberman",
+		SDL_WINDOWPOS_CENTERED,
+		SDL_WINDOWPOS_CENTERED,
+		windowWidth,
+		windowHeight,
+		SDL_WINDOW_FULLSCREEN_DESKTOP
+	);
 	if (SDLWindow == NULL) {
 		SDL_Log("SDLInit: SDL_CreateWindow: %s", SDL_GetError());
 		exit(1);
 	}
-	if (SDL_SetWindowFullscreen(SDLWindow, SDL_WINDOW_FULLSCREEN_DESKTOP) < 0) {
-		SDL_Log("SDLInit: SDL_SetWindowFullscreen: %s", SDL_GetError());
-		exit(1);
-	}
+
+	//adapt fullscreen
 	SDL_DisplayMode sdl_DisplayMode;
 	SDL_GetCurrentDisplayMode(0, &sdl_DisplayMode);
 	windowHeight = sdl_DisplayMode.h;
@@ -157,7 +162,7 @@ void SDLInit(void){
 	SDLResourceListLoadCharacter();
 }
 
-//SDLTextureDelete is a helper function of SDLTextureDelete
+//SDLTextureDelete is a helper function of ArrayDelete
 static void SDLTextureDelete(void* texture){
 	SDL_DestroyTexture(texture);
 }

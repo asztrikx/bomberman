@@ -37,8 +37,8 @@ A játékot parancssorból lehet elindítani, onnatól a játékmenet lényegi r
 - Kinézet
 	> Az egyes objektum típusok kinézetét külön képekből töltse be a program, melyek a program mellett legyenek egy mappában. Bár az objektumok méreteti előre meg lettek adva, azonban ezek csak az ütközés feltételei, a képek lehetnek akármekkora arányban átlátszóak. Egyéb megkötés nincs a kinézetre, ezt nem feladat megtervezni (de lehet).
 
-# Használat (Linux parancsok)
-- Indítás
+# Használat
+- Indítás (Linux parancsok)
 	- Új pálya: `./main`
 	- world.save betöltése: `./main load` (más spawn point)
 - Játék irányítás
@@ -57,12 +57,12 @@ A játékot parancssorból lehet elindítani, onnatól a játékmenet lényegi r
 		- Bomba nem azonnal robban.
 		- A bomba okozta tűz se azonnal tűnik el.
 		- Egyszerre 1 bombát lehet lehelyezni.
-		- Vannak elpusztíthatatlan blokkok, amely a játék stílus sajátosságát adják.
+		- Vannak elpusztíthatatlan blokkok, amely a játékstílus sajátosságát adják.
 	- Tippek
 		- Kezdéskor is szembe találhatod magad ellenséges erőkkel.
 		- Mindenkinek a hitboxa egy négyzet, erre ügyelj!
 		- Vigyázz hogy a bomba okozta tűz nehogy téged is a martalékává tegyen!
-		- Az irányítás is a játék nehézsége (😉), érdemes két billentyűt egyszerre használni
+		- Az irányítás is a játék nehézsége, érdemes két billentyűt egyszerre használni
 
 # Fordítás
 - SDL2 könyvtárat igényli: [Link](https://infoc.eet.bme.hu/sdl_telepito/)
@@ -74,11 +74,11 @@ A játékot parancssorból lehet elindítani, onnatól a játékmenet lényegi r
 	  > Előnye az, hogy hibákat is ki lehet iktatni, ha csak egy helyen kell helyesen megírni a dolgokat.  
 - resource
 	> Itt találhatóak a betöltendő képek a típusnak megfelelő mappában 0-tól kezdődő indexeléssel, png formátumban.  
-	> Bár nem volt feladat az animáció, de ez kihagyható ha nem adunk meg csak 0.png nevű képeket.  
+	> Bár nem volt feladat az animáció, de ez kihagyható ha csak 0.png nevű képeket adunk meg.  
 - main
 	> Ez tartalmazza a modulok indításának vezérlését.  
 - client
-	> Ez az egység felelős a megjelenítésért, illetve a bemenetek kezeléséért.  
+	> Ez az egység felelős a megjelenítésért, illetve a bemenetek kezeléséért (kivéve a pálya mentése).  
 - server
 	> Ez az egység felelős a pálya létrehozásáért/betöltéséért, illetve annak következő állapotának kiszámításáért.  
 	> Szintén tartalmaz autentikációt, egy client ellenére, hogy felületesen imitálja a server client modellt.  
@@ -95,15 +95,16 @@ A játékot parancssorból lehet elindítani, onnatól a játékmenet lényegi r
 - List
 	> Olyan helyeken szerepel, ahol a mérete sokszor változik, akár mindkét irányba.
 - Array
-	> Olyan helyeken szerepel, ahol a méret sokszor változik, de csak növekedhet.
+	> Olyan helyeken szerepel, ahol a méret változik, de csak növekedhet.
 
 # Függvény leírás
-> Nincs mindenhol említve, hogy fel kell szabadítani a memóriát, mivel a visszaadtott adatszerkezetből egyértelmű ez.
+> Nincs mindenhol említve, hogy fel kell szabadítani a memóriát, mivel a visszaadtott adatszerkezetből egyértelmű ez.  
+> Ahol nincs megengedve a NULL paraméter ott tilos.  
 - type
 	- \*
 		```c
 		//TypeNew creates a new Type
-		Type* TypeNew()
+		Type* TypeNew(void)
 
 		//TypeDelete frees Type
 		void TypeDelete(Type* type)
@@ -131,7 +132,7 @@ A játékot parancssorból lehet elindítani, onnatól a játékmenet lényegi r
 		ListItem* ListFindItemByPointer(List* list, void* data)
 
 		//ListNew creates a new List
-		List* ListNew()
+		List* ListNew(void)
 
 		//ListDelete frees all ListItem
 		//dataFree is called on ListItem->data if it is not NULL
@@ -208,48 +209,48 @@ A játékot parancssorból lehet elindítani, onnatól a játékmenet lényegi r
 	static UserServer* AuthFind(char* auth)
 
 	//AuthCreate creates a 26 character long auth key
-	static char* AuthCreate()
+	static char* AuthCreate(void)
 
 	//TickCalculateDestroyBomb removes bomb and creates fire in its place
 	//if object->type != ObjectTypeBomb then nothing happens
 	static void TickCalculateDestroyBomb(Object* object)
 
 	//TickCalculateFireDestroy makes fires destroys all ObjectTypeBox and all Character in collision
-	static void TickCalculateFireDestroy()
+	static void TickCalculateFireDestroy(void)
 
 	//TickCalculateEnemyKillCollisionDetect is a helper function of TickCalculateEnemyKill
 	static bool TickCalculateEnemyKillCollisionDetect(void* this, Character* that)
 
 	//TickCalculateWin checks if any CharacterTypeUser if in a winning state and removes them if so
-	static void TickCalculateWin()
+	static void TickCalculateWin(void)
 
 	//TickCalculateEnemyKill checks if any CharacterTypeUser is colliding with CharacterTypeEnemy and kills them if so
-	static void TickCalculateEnemyKill()
+	static void TickCalculateEnemyKill(void)
 
 	//TickCalculateEnemyMovement randomly creates a new random direction for CharacterTypeEnemys
-	static void TickCalculateEnemyMovement()
+	static void TickCalculateEnemyMovement(void)
 
 	//TickCalculateDestroy removes items where .destroy == tickCount
 	//destroy hooks also added here
-	static void TickCalculateDestroy()
+	static void TickCalculateDestroy(void)
 
 	//TickCalculateAnimate calculates next texture state from current
-	static void TickCalculateAnimate()
+	static void TickCalculateAnimate(void)
 
 	//TickCalculate calculates next state from current
-	static void TickCalculate()
+	static void TickCalculate(void)
 
 	//TickSend sends new world to connected clients
-	static void TickSend()
+	static void TickSend(void)
 
 	//Tick calculates new frame, notifies users
 	Uint32 Tick(Uint32 interval, void *param)
 
 	//Save saves worldServer and tickCount into world.save
-	void Save()
+	void Save(void)
 
 	//Load loads world.save into worldServer
-	void Load()
+	void Load(void)
 
 	//EventKey handles WorldServer saving
 	static int EventKey(void* data, SDL_Event* sdl_event)
@@ -326,7 +327,7 @@ A játékot parancssorból lehet elindítani, onnatól a játékmenet lényegi r
 	//CollisionFreeCountObjectGet returns how many square sized object-free area is reachable from (position - position % squaresize)
 	int CollisionFreeCountObjectGet(WorldServer* worldServer, Position position)
 
-	//SpawnGet return a position where there's at least 3 free space reachable without action so player does not die instantly
+	//SpawnGet returns a position where there's at least 3 free space reachable without action so player does not die instantly
 	Position SpawnGet(WorldServer* worldServer, int collisionFreeCountObjectMin)
 	```
 - key
@@ -357,7 +358,7 @@ A játékot parancssorból lehet elindítani, onnatól a játékmenet lényegi r
 	//SDLInit loads SDL modules
 	void SDLInit(void)
 
-	//SDLTextureDelete is a helper function of SDLTextureDelete
+	//SDLTextureDelete is a helper function of ArrayDelete
 	static void SDLTextureDelete(void* texture)
 
 	//SDLDestroy unloads SDL modules
